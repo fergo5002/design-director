@@ -1,0 +1,20 @@
+{
+  "name": "design-director",
+  "owner": { "name": "Fergus O'Reilly" },
+  "metadata": {
+    "description": "Agent design workflow: skills, a verified source catalogue, a taste ledger, linting and screenshot review.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "design-director",
+      "source": "./",
+      "description": "Design lead skill plus research, review and taste skills, backed by a verified catalogue of design sources and tooling.",
+      "version": "0.1.0",
+      "author": { "name": "Fergus O'Reilly" },
+      "keywords": ["design", "ui", "ux", "mcp", "taste", "review"],
+      "category": "design",
+      "strict": false
+    }
+  ]
+}

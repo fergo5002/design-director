@@ -1,0 +1,10 @@
+{
+  "name": "design-director",
+  "description": "An agent design workflow: a design lead skill, a verified catalogue of several hundred design sources (reference sites, libraries, MCP servers, skills), a taste ledger that rewards good design without converging on it, a slop linter and a screenshot gauntlet.",
+  "version": "0.1.0",
+  "author": { "name": "Fergus O'Reilly" },
+  "license": "MIT",
+  "homepage": "https://github.com/fergo5002/design-director",
+  "keywords": ["design", "ui", "ux", "typography", "colour", "accessibility", "mcp", "taste", "review"],
+  "skills": "./skills/"
+}

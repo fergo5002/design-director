@@ -1,0 +1,234 @@
+[[category]]
+slug = "award"
+title = "Awards worth reading"
+order = 0
+
+[[category]]
+slug = "web-gallery"
+title = "Website galleries"
+order = 1
+
+[[category]]
+slug = "landing"
+title = "Landing pages and sections"
+order = 2
+
+[[category]]
+slug = "product-ui"
+title = "Product UI and flows"
+order = 3
+
+[[category]]
+slug = "mobile-ui"
+title = "Mobile UI"
+order = 4
+
+[[category]]
+slug = "component-gallery"
+title = "Component galleries"
+order = 5
+
+[[category]]
+slug = "design-systems-reference"
+title = "Design systems to learn from"
+order = 6
+
+[[category]]
+slug = "typography-inspo"
+title = "Typography in use"
+order = 7
+
+[[category]]
+slug = "type-foundry"
+title = "Type foundries"
+order = 8
+
+[[category]]
+slug = "free-fonts"
+title = "Free and open fonts"
+order = 9
+
+[[category]]
+slug = "colour"
+title = "Colour"
+order = 10
+
+[[category]]
+slug = "icons-illustration"
+title = "Icons and illustration"
+order = 11
+
+[[category]]
+slug = "imagery-photo"
+title = "Photography, imagery and texture"
+order = 12
+
+[[category]]
+slug = "3d-motion-inspo"
+title = "3D and motion inspiration"
+order = 13
+
+[[category]]
+slug = "motion-reference"
+title = "Motion and interaction reference"
+order = 14
+
+[[category]]
+slug = "brand-identity"
+title = "Brand and identity"
+order = 15
+
+[[category]]
+slug = "editorial-critique"
+title = "Critique and editorial"
+order = 16
+
+[[category]]
+slug = "technique-tutorial"
+title = "Technique and tutorials"
+order = 17
+
+[[category]]
+slug = "studio"
+title = "Studios worth watching"
+order = 18
+
+[[category]]
+slug = "newsletter-feed"
+title = "Newsletters, feeds and curators"
+order = 19
+
+[[category]]
+slug = "dataviz-inspo"
+title = "Data visualisation"
+order = 20
+
+[[category]]
+slug = "accessibility"
+title = "Accessibility references"
+order = 21
+
+[[category]]
+slug = "presentation-deck"
+title = "Decks and presentations"
+order = 22
+
+[[category]]
+slug = "mcp-design-tool"
+title = "MCP: design tools (Figma, Penpot, Framer...)"
+order = 23
+
+[[category]]
+slug = "mcp-reference"
+title = "MCP: reference and inspiration"
+order = 24
+
+[[category]]
+slug = "mcp-components"
+title = "MCP: components and registries"
+order = 25
+
+[[category]]
+slug = "mcp-assets"
+title = "MCP: icons, fonts, images and generation"
+order = 26
+
+[[category]]
+slug = "mcp-verify"
+title = "MCP: browser and visual verification"
+order = 27
+
+[[category]]
+slug = "mcp-docs"
+title = "MCP: documentation"
+order = 28
+
+[[category]]
+slug = "skill"
+title = "Agent skills and rule packs"
+order = 29
+
+[[category]]
+slug = "ai-design-tool"
+title = "AI design tools"
+order = 30
+
+[[category]]
+slug = "aggregator"
+title = "Directories of new MCPs and skills"
+order = 31
+
+[[category]]
+slug = "component-primitives"
+title = "Headless primitives"
+order = 32
+
+[[category]]
+slug = "component-registry"
+title = "Component registries"
+order = 33
+
+[[category]]
+slug = "motion-lib"
+title = "Motion and animation"
+order = 34
+
+[[category]]
+slug = "3d-webgl"
+title = "3D and WebGL"
+order = 35
+
+[[category]]
+slug = "charts"
+title = "Charts"
+order = 36
+
+[[category]]
+slug = "icon-lib"
+title = "Icon libraries"
+order = 37
+
+[[category]]
+slug = "font-tooling"
+title = "Font tooling"
+order = 38
+
+[[category]]
+slug = "colour-tooling"
+title = "Colour tooling"
+order = 39
+
+[[category]]
+slug = "tokens"
+title = "Design tokens and styling systems"
+order = 40
+
+[[category]]
+slug = "layout-css"
+title = "Layout and modern CSS"
+order = 41
+
+[[category]]
+slug = "testing-visual"
+title = "Visual regression"
+order = 42
+
+[[category]]
+slug = "testing-a11y"
+title = "Accessibility testing"
+order = 43
+
+[[category]]
+slug = "perf"
+title = "Performance"
+order = 44
+
+[[category]]
+slug = "image-pipeline"
+title = "Image and vector pipeline"
+order = 45
+
+[[category]]
+slug = "prototyping-canvas"
+title = "Canvas and prototyping tools"
+order = 46

@@ -1,0 +1,5 @@
+# Project defaults for `ddr lint`. Rule names: default-font, purple-blue-gradient,
+# gradient-text, eyebrow, emoji-icon, ai-copy, focus-removed, zoom-blocked,
+# transition-all, default-control, no-reduced-motion, em-dash (opt-in).
+enable = []
+disable = []

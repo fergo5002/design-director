@@ -1,0 +1,28 @@
+name: radar
+on:
+  schedule: [{ cron: "17 7 * * 1" }]   # Mondays 07:17 UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      # Feed state lives in the Actions cache, so the bot never needs to push to a protected main.
+      - uses: actions/cache@v4
+        with:
+          path: library/radar-state.json
+          key: radar-state-${{ github.run_id }}
+          restore-keys: radar-state-
+      - name: Run the radar
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: python tools/ddr.py radar --write --out radar.md
+      - name: Open the weekly issue
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          gh label create radar --color 0E8A16 --description "Weekly design radar" 2>/dev/null || true
+          gh issue create --title "Design radar $(date -u +%F)" --body-file radar.md --label radar

@@ -1,0 +1,26 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: { python: ["3.9", "3.13"] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Catalogue is valid
+        run: python tools/ddr.py sources validate
+      - name: Every route in the skills resolves
+        run: python tools/check_routes.py
+      - name: SOURCES.md is up to date
+        run: |
+          python tools/ddr.py sources render
+          git diff --exit-code library/SOURCES.md || (echo "Run: python tools/ddr.py sources render" && exit 1)
+      - name: The repo passes its own lint
+        run: python tools/ddr.py lint skills templates
