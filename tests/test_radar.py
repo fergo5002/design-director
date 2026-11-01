@@ -42,5 +42,14 @@ class Candidates(unittest.TestCase):
         out = radar.candidates(items, known)
         self.assertEqual([c["name"] for c in out], ["penpot-mcp"])
 
+class Hardening(unittest.TestCase):
+    def test_token_only_for_the_real_github_api_host(self):
+        self.assertTrue(radar._is_github_api("https://api.github.com/search/repositories?q=x"))
+        self.assertFalse(radar._is_github_api("https://api.github.com.evil.example/x"))
+        self.assertFalse(radar._is_github_api("https://evil.example/?u=api.github.com"))
+
+    def test_mentions_are_defused_in_issue_text(self):
+        self.assertNotIn("@octocat", radar._safe("ping @octocat now"))
+
 if __name__ == "__main__":
     unittest.main()

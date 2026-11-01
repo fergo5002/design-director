@@ -50,6 +50,28 @@ class ParserTests(unittest.TestCase):
         e = [{"id": "x", "name": 'A "quoted"\nline \\ slash', "signal": 3, "tags": ["a", "b"]}]
         self.assertEqual(sources.parse_toml_subset(sources.emit(e))["source"], e)
 
+class SubsetEdgeCases(unittest.TestCase):
+    CASES = [
+        ('disable = ["eyebrow"]  # this brief wants one', {"disable": ["eyebrow"]}),
+        ('enable = [\n  "em-dash",\n  "eyebrow",\n]', {"enable": ["em-dash", "eyebrow"]}),
+        ("name = 'single quoted'", {"name": "single quoted"}),
+        ("nums = [1, 2]", {"nums": [1, 2]}),
+        ('a = "x # not a comment"  # real comment', {"a": "x # not a comment"}),
+    ]
+
+    def test_cases_parse_to_expected_values(self):
+        for text, want in self.CASES:
+            self.assertEqual(sources.parse_toml_subset(text), want, text)
+
+    def test_cases_agree_with_tomllib(self):
+        try:
+            import tomllib
+        except ImportError:
+            self.skipTest("tomllib unavailable")
+        for text, _ in self.CASES:
+            self.assertEqual(sources.parse_toml_subset(text), tomllib.loads(text), text)
+
+
 class ValidateTests(unittest.TestCase):
     def setUp(self):
         self.entries = sources.parse_toml_subset(SAMPLE)["source"]

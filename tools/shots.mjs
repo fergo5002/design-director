@@ -35,7 +35,13 @@ const VIEWPORTS = {
   phone: { width: 390, height: 844, isMobile: true, hasTouch: true },
   small: { width: 320, height: 568, isMobile: true, hasTouch: true },
 };
-const chosen = opt('viewports', 'desktop,phone,small').split(',').filter((v) => VIEWPORTS[v]);
+const asked = opt('viewports', 'desktop,phone,small').split(',').map((v) => v.trim()).filter(Boolean);
+const unknown = asked.filter((v) => !VIEWPORTS[v]);
+if (unknown.length || !asked.length) {
+  console.error(`unknown viewport(s): ${unknown.join(', ') || '(none given)'}. Choose from: ${Object.keys(VIEWPORTS).join(', ')}`);
+  process.exit(2);
+}
+const chosen = asked;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const outDir = path.resolve(opt('out', '.design/shots'), stamp);
 fs.mkdirSync(outDir, { recursive: true });
@@ -100,7 +106,9 @@ for (const url of urls) {
         consoleErrors.push(`navigation: ${e.message.split('\n')[0]}`);
       }
       await page.waitForTimeout(motion === 'reduce' ? 300 : 1200);
-      const slug = `${new URL(url).hostname}${new URL(url).pathname.replace(/\W+/g, '-')}`.replace(/-+$/, '');
+      const u = new URL(url);
+      const q = u.search ? '-q' + [...u.search].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36) : '';
+      const slug = `${u.hostname}${u.port ? '-' + u.port : ''}${u.pathname.replace(/\W+/g, '-')}`.replace(/-+$/, '') + q;
       const base = `${slug}__${vpName}__${motion === 'reduce' ? 'reduced' : 'motion'}`;
       await page.screenshot({ path: path.join(outDir, `${base}__fold.png`) });
       if (flag('full') && motion === 'no-preference') {

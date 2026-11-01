@@ -25,7 +25,7 @@ EXTS = {".css", ".scss", ".sass", ".less", ".html", ".htm", ".jsx", ".tsx", ".js
         ".svelte", ".astro", ".mdx", ".liquid", ".njk", ".hbs", ".erb"}
 MD_EXTS = {".md"}   # opt in with --md: plain Markdown is usually notes, not shipped copy
 SKIP_DIRS = {"node_modules", ".git", ".next", "dist", "build", "out", ".turbo", ".vercel", "coverage",
-             ".svelte-kit", ".astro", "vendor", ".cache", "storybook-static", "docs", "plans", "specs"}
+             ".svelte-kit", ".astro", "vendor", ".cache", "storybook-static"}
 OPT_IN = {"em-dash"}
 
 DEFAULT_FONTS = ["Inter", "Space Grotesk", "Poppins", "Montserrat", "Playfair Display", "Roboto",
@@ -37,11 +37,13 @@ AI_WORDS = ["seamless", "seamlessly", "elevate your", "unlock", "unleash", "empo
             "harness the power", "take it to the next level", "look no further", "world-class",
             "best-in-class", "transformative", "redefine", "reimagine"]
 
-PURPLES = r"(?:purple|violet|indigo|fuchsia)"
-BLUES = r"(?:blue|sky|cyan)"
+PURPLES = r"\b(?:purple|violet|indigo|fuchsia)\b"
+BLUES = r"\b(?:blue|sky|cyan)\b"
 PURPLE_HEX = re.compile(r"#(?:7c3aed|8b5cf6|a855f7|9333ea|6d28d9|6366f1|4f46e5|a78bfa|c084fc|d946ef)", re.I)
 BLUE_HEX = re.compile(r"#(?:2563eb|3b82f6|60a5fa|0ea5e9|06b6d4|1d4ed8|38bdf8)", re.I)
-EMOJI = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F000-\U0001F2FF]")
+# Pictographic emoji only. The 2600-27BF block also holds ordinary typographic symbols
+# (stars, ticks, the hamburger), so only its well-known emoji are listed.
+EMOJI = re.compile("[\U0001F300-\U0001FAFF\U0001F000-\U0001F2FF\u2705\u2728\u274C\u274E\u2B50\u26A1\u2764\u26A0\u2614\u2615\u267B\u26BD\u26F3\u2753\u2757]")
 
 
 @dataclass
@@ -56,12 +58,15 @@ class Finding:
         return f"{self.file}:{self.line}  {self.level:5}  {self.rule:22} {self.message}"
 
 
+SUFFIXES = "Mono|Sans|Serif|SC|Slab|Flex|Condensed|Display|Text|Rounded|Variable|Hebrew|Arabic|Cyrillic|Pro"
+
+
 def _font_re():
     names = "|".join(re.escape(f) for f in DEFAULT_FONTS)
     import_names = names.replace(" ", "_")
     url_names = names.replace(" ", "\\+")
     return re.compile(
-        rf"(?:font-family\s*:[^;{{}}]*?['\"]?\b({names})\b(?![\w-])"
+        rf"(?:font-family\s*:[^;{{}}]*?['\"]?\b({names})\b(?![\w-]|\s+(?:{SUFFIXES})\b)"
         rf"|import\s*\{{[^}}]*\b({import_names})\b[^}}]*\}}\s*from\s*['\"]next/font"
         rf"|fonts\.googleapis\.com/css2?\?family=({url_names})\b"
         rf"|font-(?:sans|display|heading)\s*:\s*\[?['\"]({names})\b)",
@@ -80,7 +85,7 @@ TRANSITION_ALL = re.compile(r"transition\s*:\s*all\b|\btransition-all\b")
 CONTROL = re.compile(r"<input[^>]*type\s*=\s*[\"'](?:range|checkbox|radio)[\"'][^>]*>", re.I)
 CONTROL_STYLED = re.compile(r"appearance-none|appearance\s*:\s*none|accent-color|accent-\w+-\d+|\bpeer\b|sr-only")
 CONTROL_CSS = re.compile(r"appearance\s*:\s*none|accent-color|-webkit-slider-thumb|::-moz-range|input\[type=[\"']?(?:range|checkbox|radio)")
-MOTION = re.compile(r"@keyframes|\banimate-[a-z]|from ['\"](?:framer-motion|motion/react|motion|gsap)['\"]|\bgsap\.")
+MOTION = re.compile(r"@keyframes|(?<![\w/-])animate-[a-z]|from ['\"](?:framer-motion|motion/react|motion|gsap)['\"]|\bgsap\.")
 REDUCED = re.compile(r"prefers-reduced-motion|useReducedMotion|motion-reduce|motion-safe|reducedMotion")
 TEXT_NODE = re.compile(r">([^<>{}]{3,})<")
 IGNORE = re.compile(r"dd-lint-ignore(?:\s+([a-z-]+(?:\s*,\s*[a-z-]+)*))?")
@@ -168,12 +173,16 @@ def _project_config():
         return set(), set()
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
     import sources
-    data = sources.loads(cfg.read_text(encoding="utf-8"))
+    try:
+        data = sources.loads(cfg.read_text(encoding="utf-8"))
+    except ValueError as e:
+        print(f"ignoring {cfg}: {e}. Use simple lists, e.g. disable = [\"eyebrow\"]", file=sys.stderr)
+        return set(), set()
     return set(data.get("enable", [])), set(data.get("disable", []))
 
 
 def lint_paths(paths, enable=(), disable=(), md=False) -> list[Finding]:
-    found, motion_at, reduced, controls_styled = [], None, False, False
+    found, motion_at, reduced, controls_styled, focus_ok = [], None, False, False, False
     for f in _walk(paths, md):
         try:
             text = f.read_text(encoding="utf-8")
@@ -183,10 +192,13 @@ def lint_paths(paths, enable=(), disable=(), md=False) -> list[Finding]:
         if motion_at is None and MOTION.search(text):
             motion_at = str(f)
         reduced = reduced or bool(REDUCED.search(text))
+        focus_ok = focus_ok or bool(FOCUS_OK.search(text))
         if f.suffix.lower() in {".css", ".scss", ".sass", ".less"} or "<style" in text:
             controls_styled = controls_styled or bool(CONTROL_CSS.search(text))
     if controls_styled:
         found = [x for x in found if x.rule != "default-control"]
+    if focus_ok:  # a global focus-visible style elsewhere replaces the removed outline
+        found = [x for x in found if x.rule != "focus-removed"]
     if motion_at and not reduced and "no-reduced-motion" not in set(disable):
         found.append(Finding(motion_at, 1, "no-reduced-motion", "error",
                              "Animation found but no prefers-reduced-motion handling anywhere in these paths."))

@@ -94,12 +94,34 @@ def candidates(items, known_urls) -> list[dict]:
     return out
 
 
+def _is_github_api(url: str) -> bool:
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    return u.scheme == "https" and u.hostname == "api.github.com"
+
+
+def _safe(text: str) -> str:
+    """Third-party text going into a GitHub issue: defuse @mentions and #refs."""
+    return re.sub(r"([@#])(?=\w)", lambda m: m.group(1) + "\u200b", str(text or ""))
+
+
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None and not _is_github_api(newurl):
+            new.remove_header("Authorization")
+        return new
+
+
+_OPENER = urllib.request.build_opener(_NoAuthRedirect)
+
+
 def _get(url: str, timeout=20, method="GET"):
     headers = {"User-Agent": UA, "Accept": "application/json, application/xml, text/html;q=0.8, */*;q=0.5"}
-    if "api.github.com" in url and os.environ.get("GITHUB_TOKEN"):
+    if _is_github_api(url) and os.environ.get("GITHUB_TOKEN"):
         headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
     req = urllib.request.Request(url, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _OPENER.open(req, timeout=timeout) as r:
         return r.status, r.headers.get("Content-Type", ""), r.read(2_000_000).decode("utf-8", "replace")
 
 
@@ -204,7 +226,7 @@ def main(argv=None):
     if every or a.discover:
         found = discover(entries)
         L += ["## New leads to verify", ""]
-        L += [f"- [{c['name']}]({c['url']}) ({c['source']}{', ' + str(c['stars']) + ' stars' if c.get('stars') else ''}): {c['description'][:160]}"
+        L += [f"- [{_safe(c['name'])}]({c['url']}) ({c['source']}{', ' + str(c['stars']) + ' stars' if c.get('stars') else ''}): {_safe(c['description'][:160])}"
               for c in found[:40]] or ["- None this week."]
         L.append("")
     days = a.stale or (180 if every else None)

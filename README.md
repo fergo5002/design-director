@@ -16,16 +16,22 @@ You need git and Python 3.9+. Node 18+ is needed only for screenshots.
 ```bash
 git clone https://github.com/fergo5002/design-director ~/design-director
 cd ~/design-director
-python3 tools/ddr.py install --agent all     # or claude, codex, cursor, gemini
+python3 tools/ddr.py install                 # Claude Code, Codex and ~/.agents
 npm install && npx playwright install chromium   # optional: the screenshot gauntlet
 ddr doctor
 ```
 
 `install` symlinks the skills into `~/.claude/skills`, `~/.codex/skills` and
-`~/.agents/skills`, writes a Cursor rule or a Gemini import for the current project
-(`--project <dir>` for another), and puts a `ddr` command in `~/.local/bin`. It never
-overwrites a skill you already have with the same name; use `--prefix` if it clashes.
-Symlinks mean `git pull` updates everything.
+`~/.agents/skills`, and puts a `ddr` command in `~/.local/bin`. It never overwrites a
+skill or command you already have; use `--prefix` if a name clashes. Symlinks mean
+`git pull` updates everything (where symlinks are unavailable it copies, and running
+`install` again refreshes the copies).
+
+Cursor and Gemini CLI read per-project files, so run this in each project you use them in:
+
+```bash
+ddr install --agent cursor,gemini --project ~/code/my-app
+```
 
 **Claude Code plugin**, if you prefer:
 
