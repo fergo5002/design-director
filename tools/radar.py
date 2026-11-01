@@ -187,7 +187,11 @@ def main(argv=None):
         merged = {**old, **{k: v for k, v in new.items() if v.get("latest")}}
         changes = diff(old, {k: v for k, v in new.items() if v.get("latest")})
         L += ["## Changed since last run", ""]
-        L += [f"- **{k}**: {o or 'first seen'} -> {n}" for k, o, n in changes] or ["- Nothing moved."]
+        moved = [(k, o, n) for k, o, n in changes if o]
+        first = [k for k, o, n in changes if not o]
+        L += [f"- **{k}**: {o} -> {n}" for k, o, n in moved] or ["- Nothing moved."]
+        if first:
+            L.append(f"- Baseline recorded for {len(first)} newly watched feeds; changes show from the next run.")
         broken = [(k, v["error"]) for k, v in new.items() if v.get("error")]
         if broken:
             L += ["", "Feeds that failed to load:", ""] + [f"- {k}: {err}" for k, err in broken]
