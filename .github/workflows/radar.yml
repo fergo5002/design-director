@@ -1,6 +1,8 @@
 name: radar
 on:
-  schedule: [{ cron: "17 7 * * 1" }]   # Mondays 07:17 UTC
+  schedule:
+    - cron: "17 7 * * 1"   # Mondays 07:17 UTC: the radar
+    - cron: "17 7 * * 4"   # Thursdays: only touch the cache, so feed state outlives the 7-day eviction
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,9 +21,11 @@ jobs:
           key: radar-state-${{ github.run_id }}
           restore-keys: radar-state-
       - name: Run the radar
+        if: github.event.schedule != '17 7 * * 4'
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         run: python tools/ddr.py radar --write --out radar.md
       - name: Open the weekly issue
+        if: github.event.schedule != '17 7 * * 4'
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         run: |
           gh label create radar --color 0E8A16 --description "Weekly design radar" 2>/dev/null || true

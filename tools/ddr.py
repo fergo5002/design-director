@@ -37,32 +37,54 @@ def agent_dirs() -> dict:
     }
 
 
+MARKER = ".ddr-source"   # written into copied skills so a later install can refresh them
+
+
+def _copy(src: pathlib.Path, dst: pathlib.Path):
+    shutil.copytree(src, dst)
+    (dst / MARKER).write_text(str(ROOT), encoding="utf-8")
+
+
+def _ours_copy(dst: pathlib.Path) -> bool:
+    m = dst / MARKER
+    return not dst.is_symlink() and m.is_file() and m.read_text(encoding="utf-8").strip() == str(ROOT)
+
+
 def _link(src: pathlib.Path, dst: pathlib.Path, copy: bool) -> str:
     if dst.is_symlink() and dst.resolve() == src.resolve():
         return f"ok      {dst} (already linked)"
+    if _ours_copy(dst):
+        shutil.rmtree(dst)
+        _copy(src, dst)
+        return f"updated {dst} (copy refreshed from this repo)"
     if dst.exists() or dst.is_symlink():
         return f"SKIPPED {dst} exists and is not this repo's. Rename yours or use --prefix."
     dst.parent.mkdir(parents=True, exist_ok=True)
     if copy:
-        shutil.copytree(src, dst)
+        _copy(src, dst)
         return f"copied  {dst}"
     try:
         dst.symlink_to(src, target_is_directory=True)
         return f"linked  {dst} -> {src}"
     except OSError:  # Windows without developer mode
-        shutil.copytree(src, dst)
-        return f"copied  {dst} (symlinks unavailable; re-run install after git pull)"
+        _copy(src, dst)
+        return f"copied  {dst} (symlinks unavailable; run install again after git pull to refresh)"
 
 
 def _shim() -> str:
     """Put a `ddr` command on PATH so agents can call the tools from any project."""
+    py = sys.executable or "python3"
     if os.name == "nt":
         target = HOME / "AppData" / "Local" / "Microsoft" / "WindowsApps" / "ddr.cmd"
-        body = f'@echo off\r\npython "{TOOLS / "ddr.py"}" %*\r\n'
+        marker = "rem ddr-shim: design-director"
+        body = f'@echo off\r\n{marker}\r\n"{py}" "{TOOLS / "ddr.py"}" %*\r\n'
     else:
         target = HOME / ".local" / "bin" / "ddr"
-        body = f'#!/bin/sh\n# design-director shim\nexec python3 "{TOOLS / "ddr.py"}" "$@"\n'
-    if target.exists() and "design-director" not in target.read_text(errors="ignore") and str(TOOLS) not in target.read_text(errors="ignore"):
+        marker = "# ddr-shim: design-director"
+        body = f'#!/bin/sh\n{marker}\nexec "{py}" "{TOOLS / "ddr.py"}" "$@"\n'
+    if target.is_symlink():
+        return f"[shim]  SKIPPED {target} is a symlink; remove it and run install again"
+    if target.exists() and marker not in target.read_text(errors="ignore").splitlines()[:3]:
         return f"[shim]  SKIPPED {target} exists and is not ours"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(body, encoding="utf-8")
@@ -75,20 +97,28 @@ def _shim() -> str:
 def install(argv):
     import argparse
     p = argparse.ArgumentParser(prog="ddr install")
-    p.add_argument("--agent", default="all", help="claude, codex, cursor, gemini, agents or all")
+    p.add_argument("--agent", default="all",
+                   help="claude, codex, agents, cursor, gemini, or all (cursor and gemini only with --project)")
     p.add_argument("--project", help="install into a project instead of your home folder")
     p.add_argument("--copy", action="store_true", help="copy instead of symlink (symlinks update with git pull)")
     p.add_argument("--prefix", default="", help="install skills as <prefix><name> to avoid clashing with your own")
     a = p.parse_args(argv)
-    agents = ["claude", "codex", "cursor", "gemini", "agents"] if a.agent == "all" else a.agent.split(",")
     proj = pathlib.Path(a.project).resolve() if a.project else None
+    if a.agent == "all":
+        agents = ["claude", "codex", "agents"] + (["cursor", "gemini"] if proj else [])
+    else:
+        agents = a.agent.split(",")
     for agent in agents:
+        if agent in ("cursor", "gemini") and (proj is None or proj == ROOT.resolve()):
+            print(f"[{agent}] skipped: Cursor and Gemini read per-project files. "
+                  f"Run `ddr install --agent {agent} --project <your project>` in each project.")
+            continue
         if agent in ("claude", "codex", "agents"):
             base = (proj / f".{agent}" / "skills") if proj else agent_dirs()[agent]
             for s in SKILLS:
                 print(f"[{agent}] " + _link(ROOT / "skills" / s, base / f"{a.prefix}{s}", a.copy))
         elif agent == "cursor":
-            target = (proj or pathlib.Path.cwd()) / ".cursor" / "rules" / "design-director.mdc"
+            target = proj / ".cursor" / "rules" / "design-director.mdc"
             target.parent.mkdir(parents=True, exist_ok=True)
             body = "\n".join(f"- {s}: {ROOT / 'skills' / s / 'SKILL.md'}" for s in SKILLS)
             target.write_text(
@@ -96,9 +126,9 @@ def install(argv):
                 "Load before writing markup, picking a colour or a font.\nalwaysApply: false\n---\n\n"
                 f"Read and follow the design-director skill files:\n\n{body}\n\n"
                 f"Tools: run `python {TOOLS / 'ddr.py'} --help`.\n", encoding="utf-8")
-            print(f"[cursor] wrote {target}  (per project: run again with --project <dir> in each repo)")
+            print(f"[cursor] wrote {target}")
         elif agent == "gemini":
-            target = (proj or pathlib.Path.cwd()) / "GEMINI.md"
+            target = proj / "GEMINI.md"
             line = f"@{ROOT / 'AGENTS.md'}"
             existing = target.read_text(encoding="utf-8") if target.exists() else ""
             if line not in existing:
@@ -162,11 +192,35 @@ def doctor(argv):
     for label, path in (("taste (here)", taste.default_path()), ("taste (global)", taste.default_path(True))):
         n = len(taste.read(path))
         print(f"  {label:12} {n} events at {path}" if n else f"  {label:12} none yet ({path})")
-    if _which("claude"):
-        out = subprocess.run(["claude", "mcp", "list"], capture_output=True, text=True, timeout=60).stdout
-        names = [l.split(":")[0] for l in out.splitlines() if ":" in l and not l.startswith(" ")]
-        print(f"  claude mcp   {', '.join(names[:12]) or 'none'}")
+    claude = shutil.which("claude")
+    if claude:
+        try:
+            out = subprocess.run([claude, "mcp", "list"], capture_output=True, text=True, timeout=60).stdout
+            names = [l.split(":")[0] for l in out.splitlines() if ":" in l and not l.startswith(" ")]
+            print(f"  claude mcp   {', '.join(names[:12]) or 'none'}")
+        except (OSError, subprocess.SubprocessError) as e:
+            print(f"  claude mcp   could not list ({type(e).__name__})")
     return 0 if ok else 1
+
+
+SAFE_PREFIXES = (["claude", "mcp", "add"], ["claude", "plugin"], ["npx", "shadcn@latest", "mcp", "init"],
+                 ["npx", "@21st-dev/cli@latest", "init"])
+UNSAFE = set(";|&`$<>\n")
+
+
+def _safe_commands(cmd: str):
+    """Split a catalogue setup line into argv lists, or None if it is anything but a plain,
+    known setup command. Commands joined with && become separate runs; no shell is used."""
+    import shlex
+    out = []
+    for part in cmd.split(" && "):
+        if any(c in UNSAFE for c in part):
+            return None
+        argv = shlex.split(part)
+        if not any(argv[:len(pre)] == pre for pre in SAFE_PREFIXES):
+            return None
+        out.append(argv)
+    return out
 
 
 def mcp(argv):
@@ -175,11 +229,14 @@ def mcp(argv):
     p = argparse.ArgumentParser(prog="ddr mcp")
     p.add_argument("--tier", choices=["core", "recommended", "optional", "all"], default="all")
     p.add_argument("--agent", choices=["claude", "codex", "cursor"], default="claude")
-    p.add_argument("--apply", action="store_true", help="claude only: run the `claude mcp add` commands")
+    p.add_argument("--apply", action="store_true", help="claude only: run the setup commands for one --tier")
     a = p.parse_args(argv)
+    if a.apply and (a.agent != "claude" or a.tier == "all"):
+        print("--apply needs --agent claude and an explicit --tier (core, recommended or optional)", file=sys.stderr)
+        return 2
     data = sources.loads((ROOT / "mcp" / "servers.toml").read_text(encoding="utf-8"))
     order = ["core", "recommended", "optional"]
-    rc = 0
+    rc, skipped = 0, []
     for s in sorted(data.get("server", []), key=lambda s: (order.index(s["tier"]), s["id"])):
         if a.tier != "all" and s["tier"] != a.tier:
             continue
@@ -188,9 +245,19 @@ def mcp(argv):
             print(f"  needs: {s['needs']}")
         cmd = s.get(a.agent)
         print("  " + (cmd or f"(no {a.agent} setup documented; see {s.get('docs', '')})").replace("\n", "\n  "))
-        if a.apply and a.agent == "claude" and cmd and cmd.startswith("claude mcp add"):
-            r = subprocess.run(cmd, shell=True)
-            rc |= r.returncode
+        if a.apply:
+            runs = _safe_commands(cmd) if cmd else None
+            if not runs:
+                skipped.append(s["id"])
+                continue
+            for run in runs:
+                exe = shutil.which(run[0])
+                if not exe:
+                    skipped.append(f"{s['id']} ({run[0]} not found)")
+                    break
+                rc |= subprocess.run([exe, *run[1:]]).returncode
+    if skipped:
+        print(f"\nNot applied, set these up by hand: {', '.join(skipped)}")
     if a.agent == "codex":
         print("\nCodex: paste the blocks above into ~/.codex/config.toml")
     if a.agent == "cursor":

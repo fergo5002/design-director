@@ -39,40 +39,95 @@ EVIDENCE_WEIGHT = {"visited": 1.0, "docs": 0.9, "search": 0.6}
 # ---------------------------------------------------------------- TOML subset
 
 _STR = re.compile(r'"((?:[^"\\]|\\.)*)"')
+_TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'|[^,\s]+')
 
 
 def _unescape(s: str) -> str:
     return json.loads('"' + s + '"')
 
 
-def _value(raw: str):
+def _strip_comment(s: str) -> str:
+    """Drop a trailing # comment that sits outside any string."""
+    quote = None
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if quote:
+            if c == "\\" and quote == '"':
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+        elif c in "\"'":
+            quote = c
+        elif c == "#":
+            return s[:i].rstrip()
+        i += 1
+    return s.rstrip()
+
+
+def _scalar(raw: str):
     raw = raw.strip()
     if raw.startswith('"'):
         m = _STR.fullmatch(raw)
         if not m:
             raise ValueError(f"bad string: {raw[:60]}")
         return _unescape(m.group(1))
-    if raw.startswith("["):
-        if not raw.endswith("]"):
-            raise ValueError(f"multi-line arrays are not supported: {raw[:60]}")
-        inner = raw[1:-1].strip()
-        return [_unescape(m.group(1)) for m in _STR.finditer(inner)] if inner else []
+    if raw.startswith("'"):
+        if len(raw) < 2 or not raw.endswith("'"):
+            raise ValueError(f"bad string: {raw[:60]}")
+        return raw[1:-1]
     if raw in ("true", "false"):
         return raw == "true"
-    if re.fullmatch(r"-?\d+", raw):
+    if re.fullmatch(r"[-+]?\d+", raw):
         return int(raw)
-    if re.fullmatch(r"-?\d+\.\d+", raw):
+    if re.fullmatch(r"[-+]?\d+\.\d+", raw):
         return float(raw)
     raise ValueError(f"unsupported value: {raw[:60]}")
 
 
+def _value(raw: str):
+    raw = raw.strip()
+    if raw.startswith("["):
+        if not raw.endswith("]"):
+            raise ValueError(f"unterminated array: {raw[:60]}")
+        inner = raw[1:-1].strip()
+        return [_scalar(m.group(0)) for m in _TOKEN.finditer(inner)]
+    return _scalar(raw)
+
+
+def _balance(s: str) -> int:
+    depth, quote, i = 0, None, 0
+    while i < len(s):
+        c = s[i]
+        if quote:
+            if c == "\\" and quote == '"':
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+        elif c in "\"'":
+            quote = c
+        elif c == "[":
+            depth += 1
+        elif c == "]":
+            depth -= 1
+        i += 1
+    return depth
+
+
 def parse_toml_subset(text: str) -> dict:
-    """Parse [[table]] arrays of flat key = value pairs (strings, ints, floats, bools, string arrays)."""
+    """Parse [[table]] arrays of flat key = value pairs: strings (both quote styles),
+    numbers, booleans and arrays (single or multi-line), with # comments. Enough for
+    the catalogue and for hand-edited .design/lint.toml; anything else raises ValueError."""
     out: dict = {}
     current = None
-    for n, line in enumerate(text.splitlines(), 1):
-        s = line.strip()
-        if not s or s.startswith("#"):
+    lines = text.splitlines()
+    n = 0
+    while n < len(lines):
+        s = _strip_comment(lines[n].strip())
+        n += 1
+        if not s:
             continue
         m = re.fullmatch(r"\[\[([A-Za-z0-9_-]+)\]\]", s)
         if m:
@@ -82,9 +137,15 @@ def parse_toml_subset(text: str) -> dict:
         m = re.fullmatch(r"([A-Za-z0-9_-]+)\s*=\s*(.+)", s)
         if not m:
             raise ValueError(f"line {n}: cannot parse {s[:60]!r}")
+        key, raw = m.group(1), m.group(2)
+        while _balance(raw) > 0 and n < len(lines):
+            raw += " " + _strip_comment(lines[n].strip())
+            n += 1
         target = current if current is not None else out
+        if key in target:
+            raise ValueError(f"line {n}: duplicate key {key!r}")
         try:
-            target[m.group(1)] = _value(m.group(2))
+            target[key] = _value(raw)
         except ValueError as e:
             raise ValueError(f"line {n}: {e}") from None
     return out

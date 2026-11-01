@@ -51,7 +51,37 @@ class Rules(unittest.TestCase):
         self.assertNotIn("em-dash", rules("<p>Fast — and cheap</p>"))
         self.assertIn("em-dash", rules("<p>Fast — and cheap</p>", enable={"em-dash"}))
 
+class FalsePositives(unittest.TestCase):
+    def test_font_families_that_merely_start_with_a_banned_name(self):
+        for face in ("Roboto Mono", "Nunito Sans", "Playfair Display SC", "Roboto Slab"):
+            self.assertNotIn("default-font", rules(f"code {{ font-family: '{face}', monospace }}", "a.css"), face)
+
+    def test_typographic_symbols_are_not_emoji(self):
+        self.assertNotIn("emoji-icon", rules("<span>★★★★☆ ✓ ☰ →</span>"))
+        self.assertIn("emoji-icon", rules("<li>✨ New</li>"))
+
+    def test_words_containing_colour_names(self):
+        self.assertNotIn("purple-blue-gradient", rules('a{background:linear-gradient(#fff,#eee)} /* risky skyline */', "a.css"))
+
 class Project(unittest.TestCase):
+    def test_tw_animate_import_alone_is_not_motion(self):
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "globals.css").write_text('@import "tailwindcss";\n@import "tw-animate-css";')
+            self.assertNotIn("no-reduced-motion", [f.rule for f in sl.lint_paths([d])])
+
+    def test_focus_ring_defined_in_another_file_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "Button.tsx").write_text('<button className="outline-none">Go</button>')
+            self.assertIn("focus-removed", [f.rule for f in sl.lint_paths([d])])
+            pathlib.Path(d, "globals.css").write_text("*:focus-visible{outline:2px solid}")
+            self.assertNotIn("focus-removed", [f.rule for f in sl.lint_paths([d])])
+
+    def test_docs_route_in_an_app_is_linted(self):
+        with tempfile.TemporaryDirectory() as d:
+            page = pathlib.Path(d, "app", "docs"); page.mkdir(parents=True)
+            (page / "page.tsx").write_text("<p>Unlock seamless docs</p>")
+            self.assertIn("ai-copy", [f.rule for f in sl.lint_paths([d])])
+
     def test_motion_without_reduced_motion_is_flagged_once(self):
         with tempfile.TemporaryDirectory() as d:
             pathlib.Path(d, "a.css").write_text("@keyframes spin{to{transform:rotate(1turn)}}")
