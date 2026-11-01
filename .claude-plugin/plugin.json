@@ -1,6 +1,6 @@
 {
   "name": "design-director",
-  "description": "An agent design workflow: a design lead skill, a verified catalogue of several hundred design sources (reference sites, libraries, MCP servers, skills), a taste ledger that rewards good design without converging on it, a slop linter and a screenshot gauntlet.",
+  "description": "An agent design workflow: a design lead skill, a verified catalogue of 933 verified design sources (reference sites, libraries, MCP servers, skills), a taste ledger that rewards good design without converging on it, a slop linter and a screenshot gauntlet.",
   "version": "0.1.0",
   "author": { "name": "Fergus O'Reilly" },
   "license": "MIT",

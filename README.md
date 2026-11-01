@@ -7,7 +7,7 @@ different directions, checks its own work in a real browser, and remembers what 
 liked and hated without turning one good look into every look.
 
 It is four skills, a set of guides distilled from a lot of rejected work, a catalogue
-of __N__ verified design sources, and a small command-line toolkit (`ddr`).
+of 933 verified design sources, and a small command-line toolkit (`ddr`).
 
 ## Install
 
@@ -99,9 +99,9 @@ written up as a cause.
 
 `ddr mcp` prints the recommended set. In short:
 
-- **Core** (free, worth having on every machine): __CORE__
-- **Recommended** (free or freemium, big gains for most work): __RECOMMENDED__
-- **Optional** (paid or specialist): __OPTIONAL__
+- **Core** (free, worth having on every machine): Playwright MCP, Chrome DevTools MCP, Context7, shadcn MCP and registries
+- **Recommended** (free or freemium, big gains for most work): Figma MCP, 21st.dev Magic MCP, Firecrawl MCP, Storybook MCP addon, Excalidraw MCP App
+- **Optional** (paid or specialist): Mobbin MCP, Refero MCP and refero-design skill, Framer MCP, Webflow MCP, Penpot MCP, Paper MCP, Canva MCP, Adobe for creativity, fal MCP, Recraft MCP, Untitled UI MCP, Argos MCP, MCP for Blender
 
 Each one is in the catalogue with cost, auth, maintenance state and security notes.
 `ddr mcp --tier core --agent claude --apply` adds the core set to Claude Code; for

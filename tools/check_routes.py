@@ -53,6 +53,14 @@ def check() -> list[str]:
         for m in DD_REF.finditer(text):
             if m.group(1) not in DD_COMMANDS:
                 problems.append(f"{rel}: names `ddr {m.group(1)}`, which ddr.py does not handle")
+    servers = ROOT / "mcp" / "servers.toml"
+    if servers.exists():
+        for s in sources.loads(servers.read_text(encoding="utf-8")).get("server", []):
+            if s.get("catalogue") not in ids:
+                problems.append(f"mcp/servers.toml: {s.get('id')} points at catalogue id {s.get('catalogue')!r}, which does not exist")
+            for f in ("tier", "why", "claude", "docs"):
+                if not s.get(f):
+                    problems.append(f"mcp/servers.toml: {s.get('id')} has no {f}")
     return problems
 
 

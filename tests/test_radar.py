@@ -36,6 +36,8 @@ class Candidates(unittest.TestCase):
             {"name": "figma-mcp", "url": "https://github.com/figma/mcp-server/", "description": "Figma MCP"},
             {"name": "penpot-mcp", "url": "https://github.com/penpot/penpot-mcp", "description": "Penpot design MCP server"},
             {"name": "db-mcp", "url": "https://github.com/a/db", "description": "Postgres MCP"},
+            {"name": "haystack", "url": "https://github.com/d/h", "description": "Design modular pipelines and agent workflows"},
+            {"name": "kicad-mcp", "url": "https://github.com/k/k", "description": "Lets LLMs design printed circuit boards"},
         ]
         out = radar.candidates(items, known)
         self.assertEqual([c["name"] for c in out], ["penpot-mcp"])

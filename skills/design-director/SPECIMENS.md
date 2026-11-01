@@ -6,7 +6,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 01 — Alaris · Studio shopfront, personality-led
+## 01: Alaris · Studio shopfront, personality-led
 **alaris.studio** · Melbourne web studio
 
 | | |
@@ -30,7 +30,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 02 — Linear · B2B SaaS product marketing
+## 02: Linear · B2B SaaS product marketing
 **linear.app**
 
 | | |
@@ -51,7 +51,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 03 — Resend · Developer tool with taste
+## 03: Resend · Developer tool with taste
 **resend.com**
 
 | | |
@@ -71,7 +71,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 04 — Attio · Conversion-led signup funnel
+## 04: Attio · Conversion-led signup funnel
 **attio.com**
 
 | | |
@@ -93,7 +93,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 05 — Lando Norris · Immersive brand / campaign
+## 05: Lando Norris · Immersive brand / campaign
 **landonorris.com** by **OFF+BRAND** · Awwwards Site of the Year
 
 | | |
@@ -115,7 +115,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 06 — Scout Motors · High-ticket commerce
+## 06: Scout Motors · High-ticket commerce
 **scoutmotors.com** · Awwwards E-commerce of the Year nominee
 
 | | |
@@ -135,7 +135,7 @@ Read the one that matches the job. Do not read all nine.
 
 ---
 
-## 07 — Stripe Press · Editorial, long-form, reading
+## 07: Stripe Press · Editorial, long-form, reading
 **press.stripe.com**
 
 | | |
@@ -146,7 +146,7 @@ Read the one that matches the job. Do not read all nine.
 
 **The job:** make reading online feel like owning an object.
 
-**Steal — this is the best colour system in the library:**
+**Steal, because this is the best colour system in the library:**
 
 Every book carries its own `--backgroundColor` and `--backgroundGradient`. Real values from source:
 
@@ -171,7 +171,7 @@ linear-gradient(#e7d4e5, #cad9e5, #eeebcc, ...)
 
 ---
 
-## 08 — Aesop · Restrained luxury, retail, wellness
+## 08: Aesop · Restrained luxury, retail, wellness
 **aesop.com**
 
 | | |
@@ -191,7 +191,7 @@ linear-gradient(#e7d4e5, #cad9e5, #eeebcc, ...)
 
 ---
 
-## 09 — Rauno Freiberg · Personal site, craft signal
+## 09: Rauno Freiberg · Personal site, craft signal
 **rauno.me**
 
 | | |

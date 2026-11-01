@@ -1,6 +1,6 @@
 ---
 name: design-director
-description: Use for ANY design work on any surface - web pages, landing pages, product UI, dashboards, data viz, brand and identity, decks, motion, images. Decides what treatment the brief calls for, reads the project's taste ledger so past wins are reused without turning into a house style, pulls references and libraries from a verified catalogue of several hundred sources, routes to the right companion guide, acquires missing libraries or typefaces, and runs a gate that checks the work is true as well as beautiful. Invoke before writing markup, choosing a colour or picking a font.
+description: Use for ANY design work on any surface - web pages, landing pages, product UI, dashboards, data viz, brand and identity, decks, motion, images. Decides what treatment the brief calls for, reads the project's taste ledger so past wins are reused without turning into a house style, pulls references and libraries from a verified catalogue of 933 verified sources, routes to the right companion guide, acquires missing libraries or typefaces, and runs a gate that checks the work is true as well as beautiful. Invoke before writing markup, choosing a colour or picking a font.
 ---
 
 # Design Director
@@ -90,6 +90,19 @@ the row it fits. `ddr mcp` lists the recommended servers by tier with exact setu
 Claude Code, Codex and Cursor. A skill or server that is not installed is not a
 reason to downgrade the design; see Step 4.
 
+**Skills that pair well**, if installed (each is in the catalogue with its install line):
+
+| Use | Skill |
+|---|---|
+| A second anti-slop pass and a CI detector | Impeccable, src:impeccable (`npx impeccable detect`) |
+| Calibrating against the current AI tells | Anthropic's frontend-design, src:anthropic-frontend-design |
+| Motion decisions and motion review | Emil Kowalski's skills, src:emil-kowalski-skills |
+| Last review pass on any UI diff | Vercel Web Interface Guidelines, src:vercel-web-interface-guidelines |
+| Product UI from real references | Mobbin skills, src:mobbin-skills, or Refero, src:refero-mcp-skill |
+| Native CSS before a JS animation library | Modern Web Guidance, src:modern-web-guidance |
+
+Where one of them disagrees with this skill, the taste ledger and the brief win, then this skill.
+
 ## Step 3: Choose the materials
 
 Read TYPE.md and COLOUR.md. A default typeface on a default palette is the fastest way
@@ -130,6 +143,12 @@ happens to be present.
 - **Typeface in an app**: `next/font`, Fontsource, or self-host the files.
 - **Typeface in a sandboxed page** (an artifact, an email, a strict CSP): use
   `ddr fonts`, which downloads the real file, subsets it and emits base64 `@font-face`.
+- **Licences on "free" code.** Several popular registries are not MIT: React Bits and
+  Animate UI are MIT plus Commons Clause, Aceternity and Preline forbid redistributing
+  their components, GSAP is free to use under its own licence, Remix Icon changed its
+  licence in January 2026, tldraw needs a licence key in production. The catalogue's
+  `licence` and `agent_notes` fields say which; read them before copying code into a
+  client's repo or anything you redistribute.
 - **Licensed face** (Klim, Dinamo, Grilli and the rest): never pirate. Name it, name the
   free substitute from TYPE.md, give the licence cost.
 

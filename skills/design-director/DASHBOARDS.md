@@ -10,7 +10,7 @@ source, not a summary of them.
 
 ---
 
-## Part 1 — The AI tells, by name
+## Part 1: The AI tells, by name
 
 These are the specific things that make a dashboard read as generated. Every one of
 them was found in one real booking console in a single afternoon.
@@ -36,7 +36,7 @@ composition was the problem.
 
 ---
 
-## Part 2 — The sidebar
+## Part 2: The sidebar
 
 The spine of the product. Everything persistent and globally relevant lives here.
 
@@ -62,7 +62,7 @@ The spine of the product. Everything persistent and globally relevant lives here
 
 ---
 
-## Part 3 — Density, grid and type
+## Part 3: Density, grid and type
 
 A dashboard is not a landing page shrunk down. They are different instruments.
 
@@ -97,7 +97,7 @@ A dashboard is not a landing page shrunk down. They are different instruments.
 
 ---
 
-## Part 4 — The four components, and nothing else
+## Part 4: The four components, and nothing else
 
 Master these and every page in the product is already designed.
 
@@ -129,7 +129,7 @@ in that context.
 
 ---
 
-## Part 5 — Choosing the overlay
+## Part 5: Choosing the overlay
 
 Getting this wrong is a design failure that reads as confusion.
 
@@ -147,7 +147,7 @@ most visible, because it is where the user goes when something is wrong.
 
 ---
 
-## Part 6 — Charts
+## Part 6: Charts
 
 Everyone forgets the same things.
 
@@ -170,7 +170,7 @@ they remove the tell in Part 1 outright.
 
 ---
 
-## Part 7 — Feel
+## Part 7: Feel
 
 This is what people mean by "feels good", and it is judged before anything is read.
 
@@ -190,7 +190,7 @@ This is what people mean by "feels good", and it is judged before anything is re
 
 ---
 
-## Part 8 — Colour, on a dashboard specifically
+## Part 8: Colour, on a dashboard specifically
 
 - **Colour is for purpose, never decoration.** If a hue is not carrying meaning, it
   is noise.
@@ -211,7 +211,7 @@ This is what people mean by "feels good", and it is judged before anything is re
 
 ---
 
-## Part 9 — Icons
+## Part 9: Icons
 
 Most icons in most products are too big.
 

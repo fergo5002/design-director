@@ -32,9 +32,10 @@ import sources  # noqa: E402
 STATE = sources.LIBRARY / "radar-state.json"
 UA = "design-director-radar/1.0 (+https://github.com/fergo5002/design-director)"
 DESIGN_WORDS = re.compile(
-    r"\b(design|figma|penpot|sketch|framer|webflow|ui|ux|tailwind|shadcn|component|icon|font|typograph|"
-    r"colou?r|palette|svg|animation|motion|lottie|rive|3d|spline|canvas|screenshot|visual|brand|mockup|"
-    r"storybook|accessib|a11y|css)\w*",
+    r"\b(figma|penpot|sketch app|framer|webflow|ui|ux|ui/ux|tailwind|shadcn|icons?|fonts?|typefaces?|typography|"
+    r"colou?rs?|palettes?|svg|lottie|rive|spline|screenshots?|visual regression|branding|brand identity|mockups?|"
+    r"storybook|a11y|accessibility|css|design systems?|design tokens?|web design|ui design|ux design|landing pages?|"
+    r"frontend design|front-end design|design agent|design tool|design-to-code|ui components?)\b",
     re.I,
 )
 

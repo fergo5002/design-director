@@ -29,11 +29,12 @@ sys.path.insert(0, str(TOOLS))
 
 SKILLS = sorted(p.parent.name for p in (ROOT / "skills").glob("*/SKILL.md"))
 HOME = pathlib.Path.home()
-AGENT_DIRS = {
-    "claude": HOME / ".claude" / "skills",
-    "codex": HOME / ".codex" / "skills",
-    "agents": HOME / ".agents" / "skills",   # the cross-agent convention some tools read
-}
+def agent_dirs() -> dict:
+    return {
+        "claude": HOME / ".claude" / "skills",
+        "codex": HOME / ".codex" / "skills",
+        "agents": HOME / ".agents" / "skills",   # the cross-agent convention some tools read
+    }
 
 
 def _link(src: pathlib.Path, dst: pathlib.Path, copy: bool) -> str:
@@ -83,7 +84,7 @@ def install(argv):
     proj = pathlib.Path(a.project).resolve() if a.project else None
     for agent in agents:
         if agent in ("claude", "codex", "agents"):
-            base = (proj / f".{agent}" / "skills") if proj else AGENT_DIRS[agent]
+            base = (proj / f".{agent}" / "skills") if proj else agent_dirs()[agent]
             for s in SKILLS:
                 print(f"[{agent}] " + _link(ROOT / "skills" / s, base / f"{a.prefix}{s}", a.copy))
         elif agent == "cursor":
@@ -147,7 +148,7 @@ def doctor(argv):
     print(f"  node         {'yes' if _which('node') else 'MISSING (needed for shots)'}")
     pw = (ROOT / "node_modules" / "playwright").exists()
     print(f"  playwright   {'yes' if pw else 'missing: npm install && npx playwright install chromium'}")
-    for agent, base in AGENT_DIRS.items():
+    for agent, base in agent_dirs().items():
         state = []
         for s in SKILLS:
             d = base / s
