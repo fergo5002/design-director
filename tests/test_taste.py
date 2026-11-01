@@ -65,5 +65,15 @@ class LedgerTests(unittest.TestCase):
         self.assertNotIn("secret-client", md)
         self.assertIn("type:serif", md)
 
+class Cli(unittest.TestCase):
+    def test_file_option_works_before_and_after_the_subcommand(self):
+        import io, contextlib
+        with tempfile.TemporaryDirectory() as d:
+            f = str(pathlib.Path(d, "t.jsonl"))
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(taste.main(["--file", f, "win", "a", "--tags", "type:x"]), 0)
+                self.assertEqual(taste.main(["win", "b", "--tags", "type:y", "--file", f]), 0)
+            self.assertEqual(len(taste.read(f)), 2)
+
 if __name__ == "__main__":
     unittest.main()

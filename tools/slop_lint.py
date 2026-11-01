@@ -58,10 +58,12 @@ class Finding:
 
 def _font_re():
     names = "|".join(re.escape(f) for f in DEFAULT_FONTS)
+    import_names = names.replace(" ", "_")
+    url_names = names.replace(" ", "\\+")
     return re.compile(
         rf"(?:font-family\s*:[^;{{}}]*?['\"]?\b({names})\b(?![\w-])"
-        rf"|import\s*\{{[^}}]*\b({names.replace(' ', '_')})\b[^}}]*\}}\s*from\s*['\"]next/font"
-        rf"|fonts\.googleapis\.com/css2?\?family=({names.replace(' ', r'\+')})\b"
+        rf"|import\s*\{{[^}}]*\b({import_names})\b[^}}]*\}}\s*from\s*['\"]next/font"
+        rf"|fonts\.googleapis\.com/css2?\?family=({url_names})\b"
         rf"|font-(?:sans|display|heading)\s*:\s*\[?['\"]({names})\b)",
         re.I,
     )
