@@ -394,7 +394,7 @@ class Feedback(Base):
 
     def test_online_audit_tells_blocked_from_dead_and_sees_path_moves(self):
         self.fintech()
-        self.ref(name="Walled", url="https://walled.example")
+        self.ref(name="Walled", url="https://walled.example", evidence="visited")
         self.ref(name="Gone", url="https://gone.example/page")
         self.ref(name="Moved", url="https://moved.example/us/en")
         answers = {"https://walled.example": (403, "https://walled.example"),
@@ -467,6 +467,32 @@ class Record(Base):
         c = self.d.confidence(self.d.load("fintech"), today=TODAY)
         self.assertNotIn("capped at 25", c["cap"])
         self.assertGreater(c["score"], 25)
+
+
+class Polish(Base):
+    def test_recently_rendered_ref_is_not_reported_as_blocked(self):
+        self.fintech()
+        self.ref(name="Walled", url="https://walled.example", evidence="screenshot", seen=TODAY.isoformat())
+        self.ref(name="Old wall", url="https://oldwall.example", evidence="screenshot", seen="2026-01-01")
+        orig = self.d._check_url
+        self.d._check_url = lambda u, timeout=8.0: (403, u)
+        try:
+            found = {f["ref"]: f["kind"] for f in self.d.audit(self.d.load("fintech"), today=TODAY, online=True)}
+        finally:
+            self.d._check_url = orig
+        self.assertNotIn("walled", found)
+        self.assertEqual(found["old-wall"], "blocked")
+
+    def test_long_names_do_not_make_ids_ending_in_a_hyphen(self):
+        self.fintech()
+        r = self.ref(name="GOV.UK Design System: Create accounts and Confirm an email address patterns", url="https://g.example")
+        self.assertFalse(r["id"].endswith("-"), r["id"])
+
+    def test_pattern_only_brief_is_not_told_off(self):
+        self.d.create("onboarding", "Onboarding", "pattern", keywords=["onboarding", "signup"])
+        rc, out = self.cli("match", "improve the signup flow")
+        self.assertIn("onboarding", out)
+        self.assertNotIn("New territory", out)
 
 if __name__ == "__main__":
     unittest.main()

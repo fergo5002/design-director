@@ -18,7 +18,7 @@ import path from 'node:path';
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
-const VALUED = ['--out', '--frames', '--walk', '--viewports'];
+const VALUED = ['--out', '--frames', '--walk', '--viewports', '--full-max'];
 const urls = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 if (!urls.length) {
   console.error('usage: node tools/teardown.mjs <url> [url...] [--out dir] [--frames 6] [--walk "A>B"] [--viewports desktop,phone] [--no-full]');
@@ -204,7 +204,15 @@ for (const url of urls) {
     await page.screenshot({ path: fold }).catch(() => {});
     rec.files.push(fold);
     await lazyScroll(page);
-    if (!flag('no-full')) { const f = path.join(dir, `${vp}__full.png`); await page.screenshot({ path: f, fullPage: true }).catch(() => {}); rec.files.push(f); }
+    if (!flag('no-full')) {
+      // capped so a 20,000px page is still one image a person or a model can read
+      const f = path.join(dir, `${vp}__full.png`);
+      const h = await page.evaluate(() => document.documentElement.scrollHeight).catch(() => v.height);
+      const cap = parseInt(opt('full-max', '9000'), 10);
+      await page.screenshot({ path: f, fullPage: true, clip: { x: 0, y: 0, width: v.width, height: Math.min(h, cap) } }).catch(() => {});
+      rec.files.push(f);
+      if (h > cap) rec.fullTruncated = `${vp} page is ${h}px tall; the full capture stops at ${cap}px (--full-max)`;
+    }
     if (vp === viewports[0] && frames) {
       const h = await page.evaluate(() => document.documentElement.scrollHeight);
       const step = Math.max(v.height, Math.floor(h / (frames + 1)));
@@ -230,7 +238,9 @@ for (const url of urls) {
           const before = await page.evaluate(() => location.href + '|' + document.body.innerText.length + '|' + document.body.innerText.slice(0, 2000));
           await target.click({ timeout: 6000 });
           await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
-          await page.waitForTimeout(1500);
+          // let the next screen arrive: network settles, then transitions finish
+          await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+          await page.waitForTimeout(1800);
           const f = path.join(dir, `walk-${String(i + 1).padStart(2, '0')}.png`);
           await page.screenshot({ path: f }); rec.files.push(f);
           step.ok = true; step.url = page.url(); step.shot = f;

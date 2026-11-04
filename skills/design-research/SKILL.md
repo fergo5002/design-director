@@ -220,7 +220,8 @@ changed. The domain is what you know; the project ledger is what you used.
 
 - Borrow techniques and principles, never a recognisable logo, photograph, paid font
   or proprietary illustration.
-- Record failed access (paywall, bot wall, dead link) instead of guessing what was behind it.
+- Record failed access (paywall, bot wall, dead link) instead of guessing what was behind it:
+  `ddr domain log <slug> note "Revolut blocked the renderer and plain requests"`.
 - Never record a reference as seen that you did not see. The score exists to stop you
   claiming expertise you have not earned; inflating it defeats the only thing it is for.
 - When a catalogue entry is dead or wrong, fix it with `ddr sources add`, and add great

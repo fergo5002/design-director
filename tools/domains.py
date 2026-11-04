@@ -370,7 +370,7 @@ def _writable(slug: str, today=None) -> dict:
 # ---------------------------------------------------------------- references
 
 def _ref_id(name: str, existing: set) -> str:
-    base = slugify(name)[:40]
+    base = slugify(name)[:40].rstrip("-")
     rid, n = base, 2
     while rid in existing:
         rid, n = f"{base}-{n}", n + 1
@@ -834,6 +834,10 @@ def audit(dom: dict, today=None, online: bool = False) -> list[dict]:
     if online:
         for r in refs:
             status, final = _check_url(r["url"])
+            seen_d = _date(r.get("seen"))
+            fresh_look = r.get("evidence") in ("screenshot", "flow") and seen_d and (today - seen_d).days <= 30
+            if (status in (401, 403, 429, 503) or status == 202) and fresh_look:
+                continue   # a bot wall to plain requests, but you rendered it this month
             if status in (401, 403, 429, 503) or status == 202:
                 add("blocked", f"{r['name']} answered {status} to a plain request", "a bot wall, not proof it is dead: check it in the renderer (`ddr teardown`)", r["id"])
             elif not isinstance(status, int) or status >= 400:
@@ -1023,7 +1027,10 @@ def main(argv=None):
                     print(f"{label:8} {row['slug']:22} confidence {row['score']:>3}/100 {row['band']:8} (matched: {', '.join(row['hits'])})")
                     for rel in row["related"]:
                         print(f"           related: {rel['slug']}" + (f" ({rel['how']})" if rel.get("how") else ""))
-            if not res["sectors"]:
+            if not res["sectors"] and res["patterns"]:
+                print("No sector matched. Fine if the job is the pattern alone; if the brief is for a particular kind of "
+                      "business, create that sector too (`ddr domain new <slug> --kind sector`).")
+            elif not res["sectors"]:
                 print("New territory: no sector domain covers this brief. You have no grounded expertise here yet.\n"
                       "Create one, then research it before designing:\n"
                       "  ddr domain new <slug> --kind sector --title \"...\" --keywords \"words,a,client,would,use\"\n"
