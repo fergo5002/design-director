@@ -1,0 +1,447 @@
+[[ref]]
+id = "linear-signup"
+name = "Linear signup"
+url = "https://linear.app/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "flow"
+score = 4
+seen = "2026-11-04"
+take = "One decision per screen: heading 'Create your workspace' (Inter 18px, weight 500, the only heading) names the outcome, not 'Sign up', then three stacked full-width pill buttons only, Google filled in the brand indigo (#6d78d5), email and SAML SSO outlined, body text 13px. No fields, no marketing, no image. Terms in one grey line under the buttons, 'Already have an account? Log in' last. Walked: 'Continue with email' swaps the same card to 'What's your email address?', one field ('Enter your email address...'), 'Continue with email' and 'Back to signup': still one question per screen"
+avoid = "Nothing to learn about field design here, because the fields come on the next screen; and a filled Google button nudges everyone to one provider"
+tags = ["layout:single-column-centred", "auth:social-first", "copy:outcome-heading"]
+shots = "domains/onboarding/shots/walks/linear.app-signup"
+notes = "Walked with ddr teardown --walk 'Continue with email', desktop; stopped there because the next step needs an email address. Measurements from teardown.md"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "vercel-signup"
+name = "Vercel signup"
+url = "https://vercel.com/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Heading sells the first useful moment, 'Your first deploy is just a sign-up away.', then four equal outlined provider buttons (Google, GitHub, ChatGPT, Apple), 'Show other options' to hide the rest, and email demoted to a blue text link 'Continue with Email ->'. Developer identity providers lead because the product imports from Git next"
+avoid = "Four providers of equal weight is a choice the user has to make before anything happens; one social-proof line ('80% faster from design to live') under the card reads as marketing on a task screen"
+tags = ["layout:card-centred", "auth:provider-stack", "copy:first-value-heading"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/vercel.com-signup__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "stripe-dashboard-registration"
+name = "Stripe dashboard registration"
+url = "https://dashboard.stripe.com/register"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "On desktop the four-field form (Email, Full name, Password, Country) floats over a blurred, greyed mock of the dashboard you are about to get, so the reward is visible behind the form. Country is pre-filled from location with a flag. Labels sit above fields, no placeholders. Primary 'Create account' stays a pale disabled purple until the fields are valid. On phone the order flips: 'Sign up with Google' first, then the form"
+avoid = "The disabled button gives no reason it is disabled; a cookie banner covers the bottom of the phone screen"
+tags = ["layout:form-over-product-preview", "fields:4", "validation:disabled-submit"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/dashboard.stripe.com-register__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "monzo-account-opening-help-and-blog-page"
+name = "Monzo account opening (help and blog pages)"
+url = "https://monzo.com/help/opening-an-account/how-to-open-a-Monzo-Personal-Account"
+verdict = "exemplar"
+angle = "direct"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Tells you what to have ready before you start ('Grab your photo ID': passport, driving licence, provisional is fine, national ID card; CitizenCards not accepted) and states the time up front ('It takes just 10 minutes to apply'). The identity step is a selfie video saying 'Hi, my name is [your name], and I want a Monzo Bank account', with spoken, written-on-paper, sign language and AAC alternatives, and the reason given in one plain sentence: banks 'have to know exactly who has accounts with us'"
+avoid = "Proof of address can be asked for mid-flow (utility bill dated within 3 months), which the user cannot prepare for unless told first; forum threads report verification taking 2 to 3 days"
+tags = ["kyc:selfie-video", "copy:what-you-need-first", "copy:time-estimate"]
+notes = "App-only flow; I read Monzo's own help page and 2019 blog post describing each step, I did not see the app screens"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "gov-uk-design-system-create-accounts-and"
+name = "GOV.UK Design System: Create accounts and Confirm an email address patterns"
+url = "https://design-system.service.gov.uk/patterns/create-accounts/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 5
+seen = "2026-11-04"
+take = "Only make an account when people 'will need to regularly access or update their data'; for one-off tasks give a reference number by email or text instead. Let users 'use as much of your service as possible before they need to create an account'. Say 'Create an account', not 'Register' or 'Sign up', and 'Create a password' rather than 'Password' so nobody thinks they are being asked for an existing one. No CAPTCHAs, no distracting links on the account screen, never ask for the same thing twice. Email confirmation: show the address it was sent to, let them resend to a different address, expire the link and say why when it has"
+avoid = "Guidance pages, not a branded product, so they teach structure and copy, not visual language"
+tags = ["copy:create-an-account", "structure:defer-account", "verification:email-loop"]
+notes = "Read the Create accounts and Confirm an email address pattern pages"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "gov-uk-one-thing-per-page-tim-paul-2015"
+name = "GOV.UK: one thing per page (Tim Paul, 2015)"
+url = "https://designnotes.blog.gov.uk/2015/07/03/one-thing-per-page/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Start with one question per page: easier for low-confidence users, works on phones, and errors, branching and save-and-return become simple. Merge pages only when research shows it helps; the comments argue the cost (page loads) and the answer (very fast pages, full-width buttons on mobile)"
+avoid = "No numbers in the post; Tim Paul later said there was no easy-to-share quantitative data, so cite it as practice, not proof"
+tags = ["structure:one-thing-per-page"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "nn-g-mobile-app-onboarding-an-analysis-o"
+name = "NN/g: Mobile-app onboarding, an analysis of components and techniques (Alita Kendrick, 2020)"
+url = "https://www.nngroup.com/articles/mobile-app-onboarding/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Evidence against the deck-of-cards tutorial (swipeable intro cards before the product): NN/g testing found they did not improve task performance and made simple apps look complicated, and even skipping costs a tap. Advice: 'avoid creating app onboarding whenever possible' and spend the effort on a usable first screen; if cards are unavoidable, a highly visible Skip, the fewest cards, one concept per card"
+avoid = "Dated 2020 and mobile-app focused; says little about web signup forms"
+tags = ["anti:deck-of-cards", "anti:product-tour"]
+notes = "Research article. First recorded as a counter by mistake and corrected by hand in refs.toml, because ddr has no ref edit command"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "notion-signup"
+name = "Notion signup"
+url = "https://app.notion.com/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Email-first with a single field: 'Work email', placeholder name@company.com, and the reason inline in a grey tip box, 'Tip: Use your work email (if you have one) so it's easier for your team to join you on Notion'. One primary 'Continue', providers below in a three-up row (Google, Microsoft, ChatGPT on desktop; Google, Apple on phone). Like Stripe, the modal sits over a blurred skeleton of the workspace"
+avoid = "Two-line heading where the second line is grey ('Notion: your AI workspace.' / 'Sign up with your work email') mixes a slogan with the instruction; the phone label changes to 'Email' and the tip shrinks to small grey helper text, so the two viewports say different things"
+tags = ["fields:1", "auth:email-first", "copy:reason-for-field", "layout:modal-over-product-skeleton"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/www.notion.so-signup__desktop__reduced__fold.png"
+notes = "www.notion.so/signup redirects here (found by the online audit on 2026-11-04); the screenshot was taken through that redirect the same day, so it shows this page. URL changed by hand because ddr has no ref edit command"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "citizenm-check-in-described-by-business-"
+name = "citizenM check-in (described by Business Travel Show Europe)"
+url = "https://www.businesstravelshoweurope.com/blog/citizenm-hotel-changed-hotels"
+verdict = "exemplar"
+angle = "outside"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "The hotel moved check-in out of the lobby: guests check in on their own phone on the way, then make 'one stop at the kiosk to pick up a key card', 'key-in-hand in one minute', 'no forms to fill out', no reception desk. Translation for software: collect what you need before the moment of arrival, so the first visit is the reward, not the paperwork"
+avoid = "A press piece, not the operator's own description; timing claims vary between sources (20 seconds to one minute)"
+tags = ["outside:hotel", "structure:paperwork-before-arrival"]
+notes = "Second-hand description of the process; I did not stay or see the kiosk"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "puregym-let-s-get-started-programme"
+name = "PureGym 'Let's Get Started' programme"
+url = "https://www.puregym.com/lets-get-started/"
+verdict = "exemplar"
+angle = "outside"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "A first visit split into three named phases: 'Setting you up' (the PIN already emailed, how the gates work, the app), 'Get gym ready' (go at quieter times, using the live busyness tracker; book the free Get Started induction; bring kit, trainers, water bottle, a padlock) and 'The first workout' (a three-step workout builder). Credentials and practicalities come first, then one concrete first session; the induction is offered, not required"
+avoid = "This is the programme page, not the induction itself; I have not seen what happens on the gym floor"
+tags = ["outside:gym", "structure:phased-first-visit", "copy:what-to-bring"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "baymard-institute-checkout-abandonment-r"
+name = "Baymard Institute: checkout abandonment research"
+url = "https://baymard.com/blog/reduce-cart-abandonment"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Forced account creation drives 18% of checkout abandonment. Make the guest path the most prominent option, labelled 'Guest Checkout' or 'Continue as Guest', above or beside the sign-in fields, and 'delay account creation until the confirmation step'. Same rule transfers to any product: let people finish the first task, then offer to save it as an account"
+avoid = "Ecommerce-specific; the article does not give the sample or year behind the 18%, so quote it as Baymard's figure, not a law"
+tags = ["structure:account-after-value", "evidence:abandonment-18pc"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "plaid-link-best-practices"
+name = "Plaid Link best practices"
+url = "https://plaid.com/docs/link/best-practices/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 3
+seen = "2026-11-04"
+take = "'Link conversion is highest when users have the right expectations set going into Link.' Before the bank-connection step, the host app should say why it uses Plaid, what connecting gives the user, that the data is secure, and what they will need to provide. Pre-fill what you already know (phone number, likely bank, the user's own country) so the third-party step starts half done"
+avoid = "Developer documentation with no screens or numbers; it describes the brief for the pre-Link screen, not the design"
+tags = ["kyc:third-party-handoff", "copy:set-expectations-first", "fields:prefill"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "luke-wroblewski-inline-validation-in-web"
+name = "Luke Wroblewski: Inline validation in web forms (A List Apart, 2009)"
+url = "https://alistapart.com/article/inline-validation-in-web-forms/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Validate on blur ('after'), not while typing: best inline version against submit-and-reload gave success up 22%, errors down 22%, completion time down 42%, satisfaction up 31% (22 people, six registration forms). Messages before or while typing raised errors and annoyed people. Use while-typing, with a short delay, only for strict-format fields such as username and password rules. Keep success messages on screen, beside the field. Do not validate names and postcodes inline: only 30 to 50% noticed those messages, and a green tick reads as 'correct', not 'valid'"
+avoid = "Small 2009 study, each person saw all six forms (learning effects), no raw counts published"
+tags = ["validation:on-blur", "validation:persistent-success", "fields:password-rules"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "appcues-best-user-onboarding-examples-sa"
+name = "Appcues: best user onboarding examples (Sara Detrik, August 2026)"
+url = "https://www.appcues.com/blog/best-user-onboarding-examples"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 3
+seen = "2026-11-04"
+take = "The 2026 shift: setup that builds the first real thing instead of explaining the empty one. Airtable builds a working base from a sentence; Clay shows 'here's what we concluded about your business, click to verify'; Linear uses no tours, progress bars or tooltips and makes the onboarding tasks real issues in your queue (about 7 steps, about 60 seconds); Calendly's onboarding ends when you have a shareable meeting link; Cursor and Comet import your old setup in one click"
+avoid = "Written by a vendor that sells onboarding tours and checklists, and most claims come with no screens, copy or step counts I could check"
+tags = ["structure:first-real-object", "structure:import-not-setup"]
+notes = "Read the article; did not verify each product's claims myself except where other refs cover them. The old URL redirects here (audit, 2026-11-04); the title I read, 'Best User Onboarding Examples: 7 Patterns From 12 Products', is this page"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "windows-11-first-run-setup-oobe-as-walke"
+name = "Windows 11 first-run setup (OOBE), as walked by Windows Latest, March 2026"
+url = "https://www.windowslatest.com/2026/03/29/windows-11-oobe-is-a-cluttered-ad-filled-mess-and-microsoft-is-finally-trying-to-fix-it"
+verdict = "counter"
+angle = "direct"
+evidence = "visited"
+score = 1
+seen = "2026-11-04"
+avoid = "Setup used as an ad slot: after the unskippable Microsoft Account sign-in and six privacy toggles all on by default, the walkthrough counts eight upsell screens in a row (restore from backup twice, an ad-targeting question, Phone Link, OneDrive, browser data, Microsoft 365 Personal then Basic straight after declining, a free 365 offer with Outlook toggled on, Game Pass). More than an hour before the desktop. 'Set up as a new PC' hidden behind 'More options'. Every screen between the person and the first useful moment that serves the vendor instead is a cost the person pays"
+tags = ["anti:setup-as-upsell", "anti:defaults-on", "anti:forced-account"]
+notes = "Read the article's step-by-step account; did not look at its screenshots or run setup myself"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "slack-get-started"
+name = "Slack get started"
+url = "https://slack.com/get-started"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "The heading is the instruction and the sequence at once: 'First, enter your email', set large (about 48px on desktop) with one line under it, 'We suggest using the email address you use at work.' with 'email address you use at work' in bold. One field (placeholder name@work-email.com), one aubergine 'Continue', then OR and three outlined providers (Google, Microsoft, Apple). 'Already using Slack? Sign in to an existing workspace' names the other job plainly"
+avoid = "A long legal line naming three agreements sits between the form and the sign-in link; on phone the cookie sheet covers the Apple button"
+tags = ["copy:first-then", "fields:1", "auth:email-first"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/slack.com-get-started__desktop__reduced__fold.png"
+notes = "The online audit gets a 403 to a plain request (bot wall); the headless renderer loaded it normally on 2026-11-04, which is the screenshot recorded here"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "wise-create-account"
+name = "Wise create account"
+url = "https://wise.com/register"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "A regulated money product that still asks for one thing first: 'Create your Wise account', 'Already have an account? Log in' straight under it, then a single field labelled 'First, enter your email address', a full-width green 'Next', and Google, Facebook and Apple as icon-only buttons. Identity checks are not on this screen at all; Wise's help says verification depends on amount, currency and how many transfers you have made ('We might only verify your identity at first, but may need to verify your address later on'), review usually 1 to 2 working days"
+avoid = "Icon-only provider buttons rely on logo recognition. The cookie dialog on phone covers the whole form; the 'Turnstile error: 600010' banner in my render is the bot check failing in a headless browser, so it is my instrument, not Wise's design"
+tags = ["kyc:progressive", "copy:first-then", "fields:1"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/wise.com-register__desktop__reduced__fold.png"
+notes = "Also read https://wise.com/help/articles/2949782/guide-to-getting-verified for the verification timing and photo tips ('all four corners of the document are visible')"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "figma-signup"
+name = "Figma signup"
+url = "https://www.figma.com/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Three elements only: 'Welcome to Figma', an outlined 'Continue with Google', 'or', a grey filled field with its label 'EMAIL' set small in a monospace inside the field, and a near-black 'Continue with email'. No legal paragraph, no marketing, nothing else above the fold on either viewport"
+avoid = "The monospace uppercase label inside a filled grey box looks like decoration and is the least legible text on the page"
+tags = ["fields:1", "layout:minimal"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/www.figma.com-signup__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "calendly-signup"
+name = "Calendly signup"
+url = "https://calendly.com/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Answers the price worry under the heading: 'Create a free account' / 'No credit card required. Upgrade anytime.' One email field and 'Continue with email', then Google and Microsoft with a reason for picking them: 'Continue with Google or Microsoft to connect your calendar.' The provider choice is explained by what it does next"
+avoid = "The right half of the card is a trial upsell under a tracked uppercase eyebrow ('TRY TEAMS PLUS EXPERIENCE FREE') with five ticked features, on a blue-to-mint gradient: a sales page leaking into the task. Placeholder-only field with no label"
+tags = ["copy:no-card-required", "auth:provider-with-reason", "anti:upsell-on-signup"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/calendly.com-signup__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "supabase-sign-up"
+name = "Supabase sign up"
+url = "https://supabase.com/dashboard/sign-up"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Developer-first ordering: GitHub, ChatGPT and SSO above the fold, then email and password with a show-password eye button. Heading 'Get started', subhead 'Create a new account'. Desktop splits the screen, form left at about 380px wide, one large customer quote right"
+avoid = "The password field's placeholder is a row of dots, so the empty field looks already filled; 'Sign up' sits as a pale disabled green with no reason given; the legal line quietly adds 'and to receive periodic emails with updates'"
+tags = ["auth:developer-providers", "fields:2", "anti:placeholder-as-value"]
+shots = "domains/onboarding/shots/2026-11-04T11-04-41/supabase.com-dashboard-sign-up__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "stripe-connect-hosted-onboarding-kyc-for"
+name = "Stripe Connect hosted onboarding (KYC for businesses)"
+url = "https://docs.stripe.com/connect/hosted-onboarding"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 4
+seen = "2026-11-04"
+take = "Names the real fork in any regulated signup: up-front (collect every eventually-due requirement in one sitting, fewer surprises later) or incremental (collect only what is currently due, so people start quickly, and ask for more as they earn more). Prefilled details are shown back for the person to confirm and edit, never silently submitted. 'Save for later' at any point; the return does not mean done, so the host app must show what is still outstanding and invite them back. When a typo blocks verification, the form asks for the one missing thing (an ID upload), not the whole flow again"
+avoid = "Developer docs; the form itself renders per country and business type, so I have not seen its screens beyond the documentation's description"
+tags = ["kyc:incremental-vs-upfront", "kyc:save-for-later", "fields:prefill-and-confirm"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "duolingo-first-screen-and-delayed-signup"
+name = "Duolingo first screen and delayed signup"
+url = "https://www.duolingo.com/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "flow"
+score = 5
+seen = "2026-11-04"
+take = "No form on the first screen: one green 'GET STARTED' (32px bold headline above, 'The most fun way to learn languages, chess, and more!') with a darker bottom edge so it reads as pressable, and an outlined 'I ALREADY HAVE AN ACCOUNT'. Walked: Get started goes straight to 'I want to learn...', a grid of eight large tiles each with a flag and a learner count ('Spanish 41.9M learners'), then the owl says 'Let's get this party started!' with one CONTINUE bottom right, then the next question. No account asked for in the first four steps. Gina Gotthilf (First Round Review, 2017): 'Simply moving the sign-up screen back a few steps led to about a 20% increase in DAUs'; a red 'Discard my progress' button was replaced by a subtle 'Later'; three soft walls, then a hard wall after several lessons. Soft and hard wall tuning later gave another 8.2%"
+avoid = "On phone the headline wraps and both buttons fall below the fold, under the cookie sheet; the vc.ru 2026 analysis calls the deferred ask a grey area once progress is used as leverage"
+tags = ["structure:value-before-account", "structure:soft-then-hard-wall", "copy:later-not-discard"]
+shots = "domains/onboarding/shots/walks/duolingo.com"
+notes = "Walked with ddr teardown --walk 'Get started>Spanish>Continue>Continue' on desktop, no data entered; walk-02 caught a loading state and walk-04 caught an animation mid-way, so the fourth question's wording is not visible. The lesson and wall sequence is from the First Round Review interview (https://review.firstround.com/the-tenets-of-a-b-testing-from-duolingos-master-growth-hacker), not walked. The vc.ru analysis I saw only as a search result"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "dribbble-onboarding-search-popular-shots"
+name = "Dribbble 'onboarding' search, popular shots"
+url = "https://dribbble.com/search/onboarding"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+avoid = "The template welcome carousel, three phones side by side: a hero photo or 3D illustration on top, a two-line title-case slogan with no noun you can act on ('Perfectly Organize Your Family Life', 'AI That Organizes For Your Work Priority', 'Stay Connected Together', 'Discover live auctions, bid in seconds'), a grey sentence under it, page dots, and a full-width pill 'Next' or 'Get Started'. Swap the logo and it fits any app. It is exactly the deck-of-cards pattern NN/g found did nothing for task performance, presented as the default answer to 'design onboarding'"
+tags = ["anti:welcome-carousel", "anti:slogan-headline", "anti:3d-illustration"]
+shots = "domains/onboarding/shots/2026-11-04T11-32-00/dribbble.com-search-onboarding__desktop__reduced__fold.png"
+notes = "Concept shots, not shipped products; recorded as what generated and template onboarding looks like, the thing a model reproduces when asked for onboarding screens. The online audit gets a 202 bot challenge to a plain request; the renderer loaded it on 2026-11-04"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "pinterest-explore-login-wall-logged-out"
+name = "Pinterest Explore login wall (logged out)"
+url = "https://www.pinterest.com/ideas/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+avoid = "The signup wall before value: a public Explore page ('Explore the best of Pinterest', 'Browse by category') loads and is immediately dimmed behind a modal, 'Welcome to Pinterest / Log in to discover more ideas just for you', with Email, Password and a red 'Log in'. No close button visible on the modal. A first-time visitor is shown the login form, and the way to create an account is the small underlined 'New to Pinterest? Join for free' near the bottom: the wall asks the new person for credentials they do not have"
+tags = ["anti:signup-wall", "anti:login-first-for-new-users"]
+shots = "domains/onboarding/shots/2026-11-04T11-32-00/www.pinterest.com-ideas__desktop__reduced__fold.png"
+notes = "Rendered logged out in a headless browser at 1440 wide; did not test scrolling or Escape to dismiss"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "linear-post-signup-onboarding-growth-div"
+name = "Linear post-signup onboarding (Growth Dives teardown, Rosie Hoggmascall)"
+url = "https://growth-dives.kit.com/posts/growth-dives-inside-linear-s-onboarding-3-things-i-didn-t-expect"
+verdict = "exemplar"
+angle = "direct"
+evidence = "flow"
+score = 5
+seen = "2026-11-04"
+take = "About ten dark screens, each one centred heading, one grey line and one action, no imagery: 'Welcome to Linear' / 'Get started'; 'Choose your style' (Light or Dark, 'Change your theme at any time via the command menu or settings'); 'Meet the command menu' with two large keycaps for the shortcut and 'Try opening the command menu with:'; 'Let's try it out' inside the real command menu; 'That was easy! Remember, use the shortcut to bring it up'; 'Join or create a team' as two tabs, existing teams listed with member counts and avatars and a 'Join' each; a GitHub workflow explainer; 'Invite co-workers to your team' with 'I'll do this later' under Continue; 'Subscribe to updates' with the changelog and marketing toggles shown off in the author's capture; 'You're good to go / When you're ready, create your first issue by pressing c' and 'Open Linear'. No confetti. Anyone with the company domain can join without an invite"
+avoid = "Type is very small on the dark screens (the author had to zoom); asking for theme before anything useful is a taste call that only works because every other step is so light"
+tags = ["flow:one-thing-per-screen", "copy:calm", "structure:join-vs-create", "structure:teach-by-doing", "defaults:marketing-off"]
+shots = "domains/onboarding/shots/teardowns/2026-11-04T11-34-17"
+notes = "Flow seen through the teardown's screenshots of every step (rendered the article full page and read each slice), not walked by me; the author joined an existing company workspace, so a brand-new workspace may differ"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "runna-onboarding-growth-dives-teardown-r"
+name = "Runna onboarding (Growth Dives teardown, Rosie Hoggmascall)"
+url = "https://growth-dives.kit.com/posts/growth-dives-how-to-nail-onboarding-a-case-study-of-runna"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Setup questions answered with the user's own real world: pick your actual race from a searchable list ('Popular Races in the United Kingdom', each with date, distance and runner count), then a race card that says 'Half Marathon, 14 Sep 2025, Shoreham-by-Sea, Flat, 230 other Runnas' and 'an elevation gain of 34 meters'. A specific fact about the person's own goal reassures more than any slogan. Goal screen 'What is your goal?' lists nine concrete plans (Race, Run a first 5k, parkrun improvement plan, Postnatal plan) with a progress bar at the top and a close button"
+avoid = "30 screens and about 12 minutes before the home screen, with birthday, gender and notifications asked before any value and a paywall near the end; the opening carousel carries Sign Up and Log In on every card, so account creation comes before the first useful moment; stock-feeling lifestyle photography of smiling runners on a bench"
+tags = ["structure:real-object-in-setup", "copy:specific-facts", "anti:long-setup"]
+shots = "domains/onboarding/shots/teardowns/2026-11-04T11-34-17"
+notes = "Seen through the teardown's screenshots (rendered the article full page, desktop only, and read it in slices); the article shows a strip of all 30 screens too small to read, so I saw most steps but not every one, hence screenshot not flow"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "zoho-crm-free-trial-signup"
+name = "Zoho CRM free trial signup"
+url = "https://www.zoho.com/crm/signup.html"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Two details worth keeping: the 'Create Password' label (GOV.UK's wording), and a plain line under the phone field, 'It looks like you're in IRELAND based on your IP. Your data will be stored in the EU data center.'"
+avoid = "Everything on one screen before any value: Full Name, Email, Create Password, Phone Number (with +353 country picker), a marketing opt-in checkbox and a Terms checkbox, then a full-width red 'GET STARTED'. The phone number is sales qualification on a self-serve trial, and the Terms checkbox is a second click that a one-line notice under the button would replace. On phone the form needs a scroll and the cookie bar hides the phone field and the button. A competitor-quote testimonial fills the left 28% of the desktop page"
+tags = ["anti:phone-on-trial", "anti:terms-checkbox", "fields:4-plus-2-checkboxes"]
+shots = "domains/onboarding/shots/2026-11-04T11-44-06/www.zoho.com-crm-signup-html__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "jira-atlassian-cloud-signup"
+name = "Jira (Atlassian) cloud signup"
+url = "https://www.atlassian.com/try/cloud/signup"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "One field and its button on one line: 'Work email' label, placeholder you@company.com, blue 'Sign up' beside it, and the reason under it, 'Using a work email helps find teammates and boost collaboration.' The price worry is answered in the subhead: 'It's free for up to 10 users - no credit card needed.' On desktop the card sits over a greyed skeleton of a Jira board, so you see the shape of what you get; on phone it drops the skeleton and shows four providers in a two-by-two grid (Google, Microsoft, Apple, Slack)"
+avoid = "A hand-drawn yellow squiggle under 'started' is decoration on a task screen; desktop shows only Google while phone shows four providers, so the two viewports offer different choices"
+tags = ["fields:1", "layout:form-over-product-skeleton", "copy:no-card-needed", "copy:reason-for-field"]
+shots = "domains/onboarding/shots/2026-11-04T11-44-06/www.atlassian.com-try-cloud-signup__desktop__reduced__fold.png"
+status = "active"
+added = "2026-11-04"

@@ -1,0 +1,375 @@
+[[ref]]
+id = "inis-meain-island-stays"
+name = "Inis Meáin Island Stays"
+url = "https://inismeain.com/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 5
+seen = "2026-11-04"
+take = "Every heading is a pair, English over Irish in a lighter grey (Rates / Rátaí, Houses / Lóistín). Rates are a plain typeset list per house per season for one fixed stay (Currach House, Jun Jul Aug, €3,750, 5 day/4 night Wednesday to Sunday, cleaning, fees and taxes included) and say what is not included (ferry, taxis). The footer prints today's sunrise, sunset and tide times over a line map of the island's field walls. Hero is aerial coast video with a thin white island outline drawn across it."
+avoid = "Phone fold has no book action at all; the only Check Availability is a pale grey bar at the foot of the Rates page; the home page runs 512 words before any price"
+tags = ["type:humanist-sans", "layout:bilingual-headings", "price:fixed-stay-list", "detail:tide-times", "imagery:aerial-landscape"]
+shots = "shots/2026-11-04T11-26-10"
+notes = "Fonts reported: a self-hosted face named 'Sans Font' plus Open Sans. Rates page also rendered full length (shots/flows/inis-01-rates.png)."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "coombeshead-farm"
+name = "Coombeshead Farm"
+url = "https://www.coombesheadfarm.co.uk/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A full-width slate grey band above the logo carries one line, 'Book a Room', in the house serif, so booking is the first thing on every page at both widths. Engraved tree-clump logo, Franklin Caslon and Georgia Pro on a warm cream ground, and the hero is the slate-roofed stone farmhouse half hidden behind hedgerow, framed with margin rather than full bleed. Opening copy is all nouns and numbers: 'Set amongst 66 acres of meadows, woodland and oak-lined streams'."
+avoid = "Shopify theme furniture (search, account, cart) given the same weight as the stay; cookie bar 'Got it!' in a different sans"
+tags = ["type:old-style-serif", "layout:booking-band", "imagery:framed-landscape", "colour:cream-slate"]
+shots = "shots/2026-11-04T11-26-10"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "ballyvolane-house"
+name = "Ballyvolane House"
+url = "https://www.ballyvolanehouse.ie/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Names the owners in the second paragraph ('Owned and run by...') and promises a manner rather than amenities ('There's no need to stand on ceremony here'). French Canon script wordmark over Mr Eaves Sans; orange BOOK NOW block at the end of the nav; the hero is the house itself in its garden, not a room."
+avoid = "Nine nav items plus a row of six social and contact icons; cookie panel overflows the phone viewport to the right; prices only behind a Bedrooms and Rates menu item"
+tags = ["voice:owner-named", "type:script-wordmark"]
+shots = "shots/2026-11-04T11-26-10"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "fforest"
+name = "fforest"
+url = "https://www.coldatnight.co.uk/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Photography of people and a dog actually using the place (campfire, hay bales, deckchairs on a boardwalk), never an empty styled room. A press quote set as the headline in heavy italic ('Labelling it a campsite would be like calling El Bulli a café'). Tracked caps nav (PLACES, ACCOMMODATION, CORPORATE, SHOP) and a dark green BOOK HERE tab fixed top right."
+avoid = "Newsletter modal on first load at both widths; on phone the BOOK HERE tab overlaps the wordmark; the console shows its availability calendar script (innstyle calendar.js requested over http) blocked as mixed content"
+tags = ["imagery:people-in-use", "voice:press-quote-headline"]
+shots = "shots/2026-11-04T11-26-10"
+notes = "Fonts reported: proxima-nova, futura-pt. The calendar was not checked visually, only the console error."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "unique-homestays"
+name = "Unique Homestays"
+url = "https://www.uniquehomestays.com/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Wordmark in widely tracked EB Garamond capitals with 'EST. 2001' beneath; nav in tracked Brandon Grotesque caps with the phone number set above it. Search bar 'Add destination | Add dates | Add guests / pets | SHOW HOMESTAYS' treats dogs as a guest type (No preference, Pet free homes, One dog, Two dogs, Three dogs). Hero photography is a styled interior with a laid table, not an exterior."
+avoid = "No prices on the home page cards (name, location line, 'View property details' only); consent modal covers the hero at both widths; phone opens on a mission paragraph ('Our mission lies in unearthing...')"
+tags = ["type:garamond-caps", "search:pets-as-guests"]
+shots = "shots/2026-11-04T11-26-10"
+notes = "Also seen without the modal in shots/flows/uh-01-home.png (desktop)."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "canopy-stars"
+name = "Canopy & Stars"
+url = "https://www.canopyandstars.co.uk/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Card grammar for a listing: county in small caps (CO. GALWAY, IRELAND), place name in a serif, 'from £128 p/n', then a green underlined 'Book now'. 'Places available this weekend' and 'next weekend' are tiles above the grid, so availability is a way in, not a filter. A three-part trust strip sits at the foot: 'Book with a 25% deposit', 'Every place personally inspected', 'Best rates guaranteed'."
+avoid = "Roboto for everything below the display serif; pill-shaped search bar and green pill buttons read as any booking platform"
+tags = ["price:from-per-night", "layout:availability-tiles", "trust:deposit-line"]
+shots = "shots/2026-11-04T11-26-10"
+notes = "Last minute page rendered full length (shots/flows/canopy-01-lastminute.png) and torn down (shots/teardown/): CiraSerif-Regular 36px headings with 0.9 to 1.8px tracking over Roboto 14px/24px body (84% of text); controls #56954e green, footer band #324f45; radii a mix of 2px, 24px and pill. Clicking into a listing failed twice (my walk script and ddr teardown --walk), so the booking step itself was not seen. Part of Sawday's (footer: Sawday's Canopy & Stars Ltd)."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "sawday-s"
+name = "Sawday's"
+url = "https://www.sawdays.co.uk/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "The hero headline is the old guidebook's own title, 'Special places to stay', in Rufina Stencil, and the photograph is captioned with the place it shows ('The Dunvegan, Isle of Skye >'). Torn-paper edge under the hero and hand-drawn line icons (a folded map with a star) carry the printed-guide origin onto the web."
+avoid = "Ochre SEARCH button and grey nav band set in Roboto; on phone the three stacked search fields and the button take the whole fold"
+tags = ["type:stencil-serif", "imagery:captioned-hero", "origin:guidebook"]
+shots = "shots/2026-11-04T11-26-10"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "little-toller-books"
+name = "Little Toller Books"
+url = "https://www.littletoller.co.uk/"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "One cover frame applied to every book: a pale grey band holding the title in small caps and the author in red small caps, above a commissioned landscape painting. The web repeats that deep red in the italic wordmark and the order button. A model for a set of cottages: one fixed frame, different landscape in each, and the name set like a book title."
+avoid = "Nav wraps to three rows on phone; Dosis on the button fights Merriweather everywhere else"
+tags = ["outside:book-covers", "type:small-caps", "system:one-frame-many-pictures"]
+shots = "shots/2026-11-04T11-26-10"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "gregans-castle-hotel"
+name = "Gregans Castle Hotel"
+url = "https://www.gregans.ie/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+take = "The photographs themselves are right: a real bedroom, the garden with striped deckchairs, a plate being dressed"
+avoid = "A celebrated small hotel sold by a dated template: a Cookiebot wall fills the whole phone fold and the top third on desktop; three-photo carousel with dots; BOOK NOW and GIFT VOUCHERS in identical white boxes; Avenir Next Rounded and Nunito on a sage frame; the header Book Now href is '#' (seen in fetched markup)"
+tags = ["slop:cookie-wall", "slop:carousel", "slop:equal-weight-ctas"]
+shots = "shots/2026-11-04T11-26-10"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "fogo-island-inn"
+name = "Fogo Island Inn"
+url = "https://fogoislandinn.ca/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Lowercase, tightly set wordmark 'fogo island inn' and one navy 'Reserve' button that survives into the phone header beside the menu. Phone fold goes video of wind in long grass, then a cream panel with the claim in plain words and a number ('100% of operating surpluses are reinvested into the community') and an outlined 'Select Your Dates'. Awards sit as two small seals in the corner (Relais & Châteaux, Michelin Guide 2026), not a logo strip."
+avoid = "No rate anywhere on the home page, only 'See rates & inclusions'; 'Plan Your Visit to Fogo Island / An Experience Unlike Anywhere Else' tab is filler"
+tags = ["layout:persistent-reserve", "trust:award-seals", "voice:numbers-not-adjectives"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "ballymaloe-house"
+name = "Ballymaloe House"
+url = "https://www.ballymaloe.ie/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Engraved portrait of the house itself as the seal logo (BALLYMALOE HOUSE round a wreath). On phone a fixed bottom bar split in two, a phone icon on the left and 'Book Now' on the right, so calling is as easy as booking. Hero video shows guests arriving with bags across the gravel, a story of the stay rather than a room tour."
+avoid = "Tagline 'Everything you desire, nothing you expect' says nothing; consent modal over the hero; no prices on the home page"
+tags = ["layout:phone-call-book-bar", "type:engraved-seal", "imagery:arrival-video"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "kip-hideaways"
+name = "Kip Hideaways"
+url = "https://www.kiphideaways.com/hideaways/brook-cottage/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "flow"
+score = 4
+seen = "2026-11-04"
+take = "Walked home, property page, dates. The property page keeps a white booking card fixed on the right: 'Book this hideaway.', 'Who's coming?' guest select, then a month calendar with unavailable dates struck through on grey and free ones underlined in green. Choosing 16 to 20 Nov collapses the calendar into a plain summary, 'Number of nights: 4 / From: Mon, 16 Nov 2026 / To: Fri, 20 Nov 2026 / Number of guests: 1 / Price: £645', then 'Book now', with a Trustpilot 4.8 (468 reviews) block under it. Under the name: 'From £175/night', sleeps and bedroom icons, six feature icons including 'Walk to a pub' and 'Walk to a shop'. The owners' own words end with 'She loves', 'We love' and 'You may not love' ('The track in is a bit bumpy... Sorry, no pets'). Booking conditions in one sentence: '3-night minimum stay, rising to 7 nights in school holidays, with flexible check-in days'."
+avoid = "The £645 total has no breakdown and the cleaning fee is left to an FAQ ('How much is the cleaning fee?'); a members' discount panel ('£50 off... Join Insiders for £25/year') sits above the booking card; dusty pink buttons and slate teal text are a stock boutique palette"
+tags = ["search:flexible-weekend-week", "imagery:detail-collage", "price:from-per-night"]
+shots = "shots/flows"
+notes = "Home page folds in shots/2026-11-04T11-34-44. Walk: shots/flows/kip3-01 to kip3-05 (desktop only). Stopped at Book now; nothing submitted. Fonts reported: argent-cf serif, filson-pro sans."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "hidden-ireland"
+name = "Hidden Ireland"
+url = "https://hiddenireland.com/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+take = "The house photography is honest daylight stone and trees; the category structure (Country House B&Bs, Exclusive Rentals, Cottages & Gate Lodges) is how guests think"
+avoid = "The dated Irish country-house collective look: a script tagline beside the logo ('Stay In Classic, Luxury & Stylish Country Houses'), three competing button colours (rose Check Availability, green Gift Vouchers Here, and on phone a red bevelled 'CHECK AVAILABILITY!' with an exclamation mark), a free-text 'Search here...' box, carousel arrows on the hero, social icons as dark tiles"
+tags = ["slop:exclamation-cta", "slop:script-tagline", "slop:competing-buttons", "slop:carousel"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "wildland"
+name = "Wildland"
+url = "https://wildland.scot/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "visited"
+score = 3
+seen = "2026-11-04"
+take = "A woodcut-style round logo crowded with animals and plants, roman capitals with one handwritten word ('A LANDSCAPE FULL OF hope'), and the nav's last item 'Book now' set in the same handwriting. Copy leads with rewilding the estate, so the stay is the second reason to come."
+avoid = "Handwritten accent words are easy to copy into a cliché; black hero with no image is how my render saw it"
+tags = ["type:roman-plus-hand", "voice:land-first"]
+shots = "shots/2026-11-04T11-34-44"
+notes = "Rendered at both widths but the hero media was replaced by 'We couldn't verify the security of your connection', so recorded as visited, not screenshot."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "cicerone-guidebooks"
+name = "Cicerone guidebooks"
+url = "https://www.cicerone.co.uk/"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "The guidebook route card: every walk reduced to one row of four facts, time, distance, ascent, descent (seen in the app frame: 4:30, 12.0 km, 1090 m, 290 m) with a red dotted route on a pale map and an elevation profile. Exactly the grammar a cottage page needs for 'what is near': the walk to the village, the river path, the nearest pub, as numbers."
+avoid = "The web shop itself is generic Shopify: blue buttons, phone mock-ups, a 'Get 10% Off' tab"
+tags = ["outside:guidebook", "info:route-facts-row"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "plum-guide"
+name = "Plum Guide"
+url = "https://www.plumguide.com/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Domaine Display Narrow serif headline over Halyard UI, a language and currency pill ('EN | €') in the header, and the curation claim stated as a number (only the top 3% of homes accepted, from fetched copy). On phone the hero photo ends in a cream sheet with rounded top corners that holds the headline and stacked search fields."
+avoid = "Two award roundels (Condé Nast Traveller Readers' Choice 2026, Best Villa Rental Company) sit above the headline and are louder than it; the stock pool-and-mountain villa says nothing about any one home"
+tags = ["type:narrow-display-serif", "trust:award-roundels"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "wix-b-b-apartment-modern-template"
+name = "Wix B&B apartment (Modern) template"
+url = "https://www.wix.com/website-template/view/html/4567"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 1
+seen = "2026-11-04"
+avoid = "The builder default for a B&B: placeholder name 'Oasis Inn 2', centred slogan with no noun you can picture ('Stylish Urban Retreat / Modern comfort in the heart of the city'), a navy pill 'Explore' button that goes nowhere useful, Madefor Display on a pale lavender band, then a split of two stock still-lifes (a palm frond, a vase in window light). No dates, no price, no place."
+tags = ["slop:slogan-hero", "slop:stock-still-life", "slop:pill-cta"]
+shots = "shots/2026-11-04T11-34-44"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "zarla-ai-b-b-and-cabin-templates"
+name = "Zarla AI B&B and cabin templates"
+url = "https://www.zarla.com/templates/boutique-hotel/cabin-rental"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 1
+seen = "2026-11-04"
+avoid = "What a generator now makes for this category, and it fakes specificity: headline formula '[Adjective] [Type] in [Place]' with the place in a mustard or tan accent ('Secluded Cabin Rentals in Gatlinburg', 'Small Guest House in Portland, ME'); a tracked caps eyebrow of dot-separated facts between two rules ('FORTY ACRES · TWELVE MINUTES TO THE PARK GATE'); three check-mark pill chips ('Five Cabins Only', 'Dogs Welcome', 'Wood Included'); a filled 'Check Dates' or 'Ask About Dates' beside an outlined 'See The Cabins'; a 555 phone number and the same button repeated in the header; one Outfit-style sans or a chunky serif throughout. The copy sounds lived-in ('nobody you can see from your porch') but no price, no calendar and no changeover day appear anywhere above the fold."
+tags = ["slop:place-in-accent-colour", "slop:eyebrow-facts", "slop:check-pills", "slop:two-buttons"]
+shots = "shots/2026-11-04T11-41-13"
+notes = "Also seen: the guest-house template at /templates/boutique-hotel/guest-house and the index of twelve B&B templates at /website-templates/bed-and-breakfast/ (shots/2026-11-04T11-26-10)."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "donegal-cottage-holidays-listing-page"
+name = "Donegal Cottage Holidays listing page"
+url = "https://donegalcottageholidays.com/cobblestone-cottage"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+take = "A guest testimonial on the page praises the portal for 'price details given immediately', which is the whole lesson: guests reward the price up front. The photograph of a real whitewashed stone cottage with a slate roof beats any styling."
+avoid = "The dated owner-portal page: purple and teal bands, folder tabs (Property Details, Facilities, Tariff, Availability, Gallery, Location) set in a handwriting face, clip-art feature badges (sea views, free wifi, open fireplace), a browser-default search box, 'email the owner @' button, generic spa copy ('your blood pressure will go down just walking through the door', 'Experience the Peaceful and Serene Spaces'), and a fixed-width layout that is simply shrunk on a phone. Price and availability sit behind tabs."
+tags = ["slop:tabbed-property", "slop:clip-art-badges", "slop:not-responsive"]
+shots = "shots/2026-11-04T11-41-13"
+notes = "The page shows a private owner's first name and mobile number; deliberately not recorded here."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "st-john-restaurant-smithfield-page"
+name = "St. JOHN restaurant (Smithfield page)"
+url = "https://stjohnrestaurant.com/a/restaurants/smithfield"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "The printed-menu manner on a web page: Georgia only, place name in wide bold capitals (SMITHFIELD), the address in italic with '(Directions)', two rectangular buttons with square corners (outlined 'View Menus', solid black 'Make a Reservation'), an engraved butcher's-diagram pig as the logo, and opening hours as two plain columns (LUNCH, SUPPER) with times typed in full ('Sunday evening: closed'). It states its own rhythm honestly: 'Menus will not go online until 11.00am for lunch and 5.00pm for supper.' A cottage can set its rates, changeover day and house rules the same way."
+avoid = "Social links as the first line of the page"
+tags = ["outside:printed-menu", "type:single-serif", "voice:plain-rules"]
+shots = "shots/2026-11-04T11-42-53"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "de-blacam-and-meagher-architects"
+name = "de Blacam and Meagher Architects"
+url = "https://deblacamandmeagher.com/"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "An architecture practice's restraint: the name is one widely letterspaced line of capitals with the small words smaller (DE, AND, ARCHITECTS), four plain nav words, and a single large photograph of a room opening through steel doors to a planted yard, with nothing laid over it. Shows how a stone building's own photograph can carry a home page without headline, badge or button over the image."
+avoid = "Carousel arrows; teal cookie buttons unrelated to the rest"
+tags = ["outside:architecture-practice", "type:letterspaced-caps", "imagery:unadorned-photo"]
+shots = "shots/2026-11-04T11-42-53"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "irish-landmark-trust"
+name = "Irish Landmark Trust"
+url = "https://irishlandmark.com/properties/drum-gatelodge/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "flow"
+score = 4
+seen = "2026-11-04"
+take = "Walked property page, calendar, arrival date, booking panel. Under the property name, four icon facts: '2 Dogs Allowed', 'From £346 for 2 nights', 'Sleeps 2', 'Wood Burning Stove' (price per stay, minimum written in). The calendar is the best picture of availability seen: every bookable arrival day a filled dark green circle with white numerals, booked spans grey bars with slanted ends showing changeover, above it 'Click arrival date for cost of stay' and a map of Ireland with every property pinned. Clicking a date opens 'Your booking': Selected property, 'Arrival: Mon 16 November 2026', 'Stay for' (a select of 2 to 13 nights), Adults, Children, Infants, then one dark green 'BOOK NOW'. The house's history is a tab beside the FAQ and booking conditions, and the dog fee is stated ('£30 per pet')."
+avoid = "The calendar's promise ('cost of stay') is not kept on the first click: the panel asks for nights and guests before any figure; on desktop the calendar sits halfway down the right column and on phone below the map; a newsletter modal greets every first visit; the booking engine (Supercontrol) is an iframe in its own plainer sans with italic buttons, against the site's Joane Stencil and TT Norms Pro"
+tags = ["layout:dot-calendar", "price:per-stay-with-minimum", "info:icon-facts", "detail:property-history"]
+shots = "shots/flows"
+notes = "Walk: shots/flows/ilt2 to ilt4 (desktop and phone). Home page folds: shots/2026-11-04T11-15-29. Stopped before BOOK NOW; nothing submitted."
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "living-architecture"
+name = "Living Architecture"
+url = "https://www.living-architecture.co.uk/book.asp"
+verdict = "exemplar"
+angle = "leader"
+evidence = "flow"
+score = 4
+seen = "2026-11-04"
+take = "Walked booking page, house, calendar. The whole site is a ruled grid of 1px black cells like a drawing sheet, nav in tracked capitals (OUR STORY, HOUSES, CONTACT US, BOOKING, LAST MINUTE STAYS) with the current one filled. Booking is a two-column table: 'CHOOSE YOUR HOUSE' lists the houses on the left, the chosen one turns solid black, and the right becomes 'CHOOSE START DATE' with two months side by side in the same ruled grid. Only valid start days are underlined in red (Mondays and Fridays), the rest grey; the instruction is one plain sentence ('Click on an underlined red available start date. Once selected, click on an underlined red available end date.'). Below, one photograph of the house with two cells: 'Kent', 'Sleeps 8'."
+avoid = "Home hero is a crossfade slideshow with dots; a chat widget ('Hi, let us know if you have any questions') and a cookie panel cover the calendar's corners; the booking engine sits in an iframe from a separate system"
+tags = ["layout:ruled-grid", "layout:two-month-calendar", "type:tracked-caps", "info:changeover-days"]
+shots = "shots/flows"
+notes = "Home folds: shots/2026-11-04T11-26-10. Walk: shots/flows/la4-01 and la4-02. Fonts reported: Open Sans light and semibold."
+status = "active"
+added = "2026-11-04"

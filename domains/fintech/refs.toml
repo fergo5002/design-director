@@ -1,0 +1,412 @@
+[[ref]]
+id = "wise"
+name = "Wise"
+url = "https://wise.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 5
+seen = "2026-11-04"
+take = "The product is the hero: a live send calculator sits right of the headline with the real numbers (1,000.00 EUR in, 105,697.12 INR out, 'Total fees 6.69 EUR included', 'Arrives Today - in 2 minutes', 'Guaranteed for 52h'). Amounts set in the heavy condensed Wise Sans at roughly 44px, labels in Inter at 14px. Headline in the same face, all caps, about 80px, three lines. Fee shown as one total in the currency you pay, not a percentage"
+avoid = "Claims savings against unnamed 'major banks' without showing the comparison; the 3D cookie illustration on the consent banner is the only off-key image"
+tags = ["layout:calculator-hero", "type:condensed-caps", "copy:fee-in-money"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/wise.com__desktop__motion__fold.png"
+notes = "Phone fold has a different h1 ('The international account that saves you money') and the calculator moves below; cookie modal covers the lower half on phone"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "stripe"
+name = "Stripe"
+url = "https://stripe.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A live counter as the first line ('Global GDP running on Stripe: 1.74380037%') in 14px above a 48px Sohne headline whose first sentence is near-black (#020826) and whose second sentence turns slate, so one heading carries both the claim and the detail. Primary button #533afd, square-ish 4px radius, beside a 'Sign up with Google' ghost button"
+avoid = "The ribbon gradient is now Stripe's own signature and reads as borrowed on anyone else; logo marquee straight under the fold"
+tags = ["copy:live-counter", "type:two-tone-heading"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/stripe.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "ramp"
+name = "Ramp"
+url = "https://ramp.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Numbers as proof everywhere: a 12px tracked caps label 'US CORPORATE PAYMENTS PROCESSED BY RAMP: 0.9672259%' in a grey pill, and a ticker band along the bottom edge ('ACCOUNTING FIELDS CODED: 629,319', 'EXPENSES REVIEWED: 140,589') with figures in tabular monospace chips. Headline 'Time is money. Save both.' in Lausanne at about 76px, left aligned, on white with a faint dot grid. One acid accent (#e4f222) used only on the two CTAs"
+avoid = "Counters with no period or method stated are decoration dressed as data; the claim '3.2x faster than the average American business' leans on a linked report the page does not summarise"
+tags = ["copy:live-counter", "colour:single-acid-accent", "type:tabular-figures"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/ramp.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "mercury"
+name = "Mercury"
+url = "https://mercury.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Calm and premium for startup banking: the custom Arcadia face throughout, a 52px headline 'Radically different banking' centred over a full-bleed misty valley with a lone desk, and the email field joined to the 'Open account' button (#5266eb) as one control. The regulatory line ('Mercury is a fintech company, not an FDIC-insured bank. Banking services provided through Choice Financial Group and Column N.A., Members FDIC.') sits in the first screen, not the footer. Below: stat row '450K+', '1 in 3 startups', '$20B+ monthly volume', '4.9 App Store', and '$5M FDIC insurance... 20x the usual coverage'"
+avoid = "The dreamy rendered landscape is close to the soft impossible light of generated imagery; copy it and you get slop. Centred hero plus two buttons is the default layout"
+tags = ["imagery:landscape", "layout:joined-email-cta", "copy:disclosure-in-hero"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/mercury.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "monzo"
+name = "Monzo"
+url = "https://monzo.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Consumer bank as a lifestyle brand that still shows its credentials in the hero: a rounded 24px-radius photo panel, heavy rounded display face (MonzoSansDisplay, about 52px), and trust badges placed in the picture itself (a 'Which? Recommended Provider' roundel top right, FSCS and Current Account Switch Guarantee marks bottom right). Rates are given in the regulated form, e.g. 'Representative 64.2% APR (variable), includes monthly fee', 'up to 3.65% AER (variable)'. Voice is light ('We're not talking about the crunchy, tasty kind' on the cookie banner)"
+avoid = "Hero copy 'Spend your money on life, not your life on money' is a slogan with no product noun; the joke cookie copy only works for an established brand"
+tags = ["imagery:candid-photo", "copy:regulated-rate-format", "trust:badges-in-hero"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/monzo.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "brex"
+name = "Brex"
+url = "https://brex.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Shows the physical object: a black card with a copper edge and a phone wallet on a pale plinth, with a thin orange line drawing between them. Headline 'Finance built for speed and control.' in Inter at about 72px with tight tracking, one red-orange (#ff3d00) for every action"
+avoid = "Inter everywhere plus a single saturated accent on everything clickable is the category default; swap the logo for Ramp's and little changes"
+tags = ["imagery:card-object", "colour:single-accent"]
+shots = "domains/fintech/shots/2026-11-04T11-02-09/brex.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "wayflyer"
+name = "Wayflyer"
+url = "https://www.wayflyer.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 5
+seen = "2026-11-04"
+take = "Revenue-based lender that leads with the terms, not a mood: a live counter in monospace digits above the headline ('Capital deployed so far: €6,446,167,800'), a two-sentence headline at about 64px ('Financing built for growing businesses. Apply in less than 10 minutes.'), then the three answers a borrower wants in one 18px line: 'From €10k to €20m. No personal guarantees. No equity taken.' Email joined to 'Apply now' (#1430ff), '4.6 stars from 500+ reviews' under it, and a numbered product tour ('Tell us about your business', 02, 03) immediately below. Further down it prices with a worked example: €100,000 financing, €7,200 fee, €107,200 to repay, and says 'You know the full cost before you accept'"
+avoid = "Gradient announcement bar (blue to pink) at the very top is the one slop note; no regulator named anywhere on the page"
+tags = ["copy:worked-cost-example", "type:mono-figures", "copy:terms-in-hero"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.wayflyer.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "starling-bank"
+name = "Starling Bank"
+url = "https://www.starlingbank.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A semi-monospace (CoFo Sans Semi-Mono) for the nav, buttons and labels against Avantt for headings, so the interface reads like a statement while the headline stays human. Hero is a real app screen in a hand with real-looking amounts ('For Chester £50.00', 'Santorini Spending £350.00', 'Monthly Bills'), not a floating mock-up. Rates in the full regulated form: '4.00% AER/ 3.92% gross (variable) interest up to £25k'; 'Eligible deposits are protected up to £120,000 by the FSCS'. Teal buttons with a 4px radius"
+avoid = "Headline 'Good with money starts here.' says nothing a rival could not; the hero photo is dark and the cookie sheet covers it on phone"
+tags = ["type:semi-mono-ui", "imagery:real-app-in-hand", "copy:regulated-rate-format"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.starlingbank.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "wealthfront"
+name = "Wealthfront"
+url = "https://www.wealthfront.com"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "The rate is the headline: '4.45% APY' in bold Calibre at about 96px, with 'Better than a bank' in GT Alpina italic at about 52px beneath it, three icon lines ('Zero account fees', 'Free 24/7 instant withdrawals', 'Up to $8M in FDIC insurance eligibility through program banks'), and the dated footnote sitting right under the buttons in 12px ('3.55% Base Annual Percentage Yield (APY) as of 10/01/2026 is provided by program banks and is subject to change'). Performance shown as actual returns with periods (1-year 12.10%, 5-year 8.93%, 10-year 11.02%)"
+avoid = "Deep violet gradient field (#2e0e76 to #4215a7) and a sparkle icon before 'Earn up to' are two generic tells on an otherwise specific page"
+tags = ["type:rate-as-headline", "type:serif-italic-pairing", "copy:dated-footnote"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.wealthfront.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "robinhood-eu-site"
+name = "Robinhood (EU site)"
+url = "https://robinhood.com/us/en/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A book serif for an investing headline: 'One place for all your investments' in Martina Plantijn at about 96px, centred over a dark, slow liquid-metal texture, with Capsule Sans for body and one olive-lime accent (#80991a in my dimmed shot) on 'Sign up'. Risk lines are written plainly: 'Classic Stock Tokens carry a high level of risk and are not appropriate for all investors'"
+avoid = "The /us/en/ URL served the EU site from here (title 'Robinhood EU', Bank of Lithuania as regulator), so this is not the US page; the 3D liquid backdrop drifts towards abstract render territory"
+tags = ["type:serif-display", "colour:dark-ground"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/robinhood.com-us-en__desktop__motion__fold.png"
+status = "retired"
+retired_on = "2026-11-04"
+retired_reason = "Recorded under /us/en/ but that URL redirects to /eu/en/ from here; replaced by robinhood-eu under the URL actually seen"
+added = "2026-11-04"
+
+[[ref]]
+id = "tide"
+name = "Tide"
+url = "https://www.tide.co"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Small business account that puts the honest small print next to the button: 'FSCS-Protected Bank Account by ClearBank' in 12px directly under 'Open an account', and the page says 'Tide is not a bank'. Trust row beside the CTA ('Excellent', 39,918 reviews on Trustpilot) and MTD, Switch Guarantee and FSCS marks. Heavy rounded display (Radikal) at about 80px on navy #060b4d"
+avoid = "A sponsored rugby player holding the card is ad-campaign imagery, not the product; 'manage your business seamlessly' in a section heading"
+tags = ["copy:disclosure-at-cta", "trust:review-count"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.tide.co__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "funding-circle-uk"
+name = "Funding Circle UK"
+url = "https://www.fundingcircle.com/uk/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "The product grid quotes the real terms per product: 'Business loan: Secured loan up to 6 years, £10,000 to £750,000, From 6.9% per year, One-off completion fee'; 'Government-backed loan: £25,001 to £250,000, From 13.4% per year'. Decision and payout stated as numbers ('decision in as little as 5 minutes', 'Funds paid out typically within 48 hours'), plus 'Get a personalised quote without affecting your credit score' and the FCA firm number in the footer"
+avoid = "Hero is a promotion ('2% cashback on all business spend') on a stock photo of a smiling woman holding a card, and the consent wall covers half the first screen; no representative APR on the page"
+tags = ["copy:rate-per-product", "imagery:stock-smile"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.fundingcircle.com-uk__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "pipe"
+name = "Pipe"
+url = "https://www.pipe.com"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "Embedded finance sold to platforms, not borrowers: black ground, Suisse at about 32px with the brand name picked out in orange (#e2572c) inside the sentence ('Pipe is the embedded financial OS powering businesses on your platform'), and a grainy, candid film photo of a small business owner on the phone instead of a dashboard mock. Proof is platform metrics with a footnote defining them ('9.4% Activation in first month*', '61% Average conversion rate')"
+avoid = "No cost, repayment or lender of record is explained on the page; most of the copy only arrives with scripted animation (the scrape saw 119 words)"
+tags = ["imagery:film-grain-candid", "audience:platforms"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/www.pipe.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "c-hoare-co"
+name = "C. Hoare & Co."
+url = "https://www.hoaresbank.co.uk"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 5
+seen = "2026-11-04"
+take = "The private-bank register: a split screen of deep bottle green (about #00332e) on the left with a 64px light serif set in caps (Trirong, 'EXPERTISE, EMPATHY AND EXCEPTIONAL FLEXIBILITY'), a small tracked gold label ('PRIVATE BANKING', about #a38747) and a gold arrow, and on the right a photograph of a real panelled room with a chandelier and portraits. Script wordmark with 'PRIVATE BANKERS SINCE 1672' beneath. No rates, no sign-up: the only actions are Login and contact. What to borrow for a credit union or a relationship lender is the restraint and the claim of continuity, not the chandelier"
+avoid = "Caps serif for whole sentences tires quickly; three adjectives in the headline is a rule-of-three tell even here"
+tags = ["colour:bottle-green-gold", "type:caps-serif", "imagery:real-premises"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.hoaresbank.co.uk__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "apple-card"
+name = "Apple Card"
+url = "https://www.apple.com/apple-card/"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A credit card sold as a product page: SF Pro Display at about 96px ('The simplicity of Apple. In a credit card.'), one black pill 'Apply now', and the card shown inside the phone rather than as plastic. Cost is turned into features: section headings 'No Fees', 'Pay Less Interest' (the app 'estimates the interest you'll wind up paying, based on any payment amount you choose'), '2% Daily Cash', with the APR range in the footnotes ('Variable APRs for Apple Card range from 17.74% to 27.99% based on creditworthiness') and the issuer named ('issued by Goldman Sachs Bank USA, Salt Lake City Branch')"
+avoid = "The APR only lives in a footnote; the pastel gradient card face is Apple's own and anyone else using it looks like a copy"
+tags = ["copy:cost-as-feature", "type:display-sans-huge"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.apple.com-apple-card__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "shopify-capital"
+name = "Shopify Capital"
+url = "https://www.shopify.com/capital"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Embedded revenue-based financing where eligibility is computed, not applied for: the CTA is 'Log in to check eligibility', with 'Don't have a Shopify store? Start one for free' in 14px beneath, and the repayment model is stated in one line ('Pay it back with a percentage of your store's daily sales... only on days you make sales'). Light grey ground #f2f2f0, Inter at about 60px, a real portrait of two merchants on a stair. Lender named in the small print: 'All loans through Shopify Capital are issued by WebBank'; 'maximum repayment term is 18 months'"
+avoid = "No flat fee, remittance rate or worked example anywhere on the page; three imperative slogans in the headline ('Fund your business. Drive growth. Scale faster.')"
+tags = ["pattern:eligibility-from-data", "copy:repayment-one-line"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.shopify.com-capital__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "lemonade"
+name = "Lemonade"
+url = "https://www.lemonade.com"
+verdict = "exemplar"
+angle = "leader"
+evidence = "screenshot"
+score = 3
+seen = "2026-11-04"
+take = "An adjacent regulated money product that sets its whole world in one drawing style: grey line illustration of a street (houses, a car, a dog, a man on a bench) with a single hot-pink CTA 'CHECK OUR PRICES', Merriweather serif headline at about 64px ('Forget everything you know about insurance'). Prices quoted as floors per product: 'Renters From $5/mo', 'Homeowners From $25/mo', 'Car As low as $30/mo'"
+avoid = "The press logo strip under the hero is the 2016 startup default; line-illustration worlds are now common enough to read as a template if copied"
+tags = ["imagery:line-illustration", "copy:price-floor"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.lemonade.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "sn-hetta-norges-bank-banknotes"
+name = "Snøhetta, Norges Bank banknotes"
+url = "https://old.snohetta.com/projects/406-new-banknote-design-for-norges-bank"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 5
+seen = "2026-11-04"
+take = "Money's own design: each denomination owns one colour (green 50, red 100, blue 200, orange 500 in the photo) and a pixel pattern that grows coarser and choppier as the value rises, mapped to the Beaufort wind scale ('a dense cubic patterning and long, tame waves' on the 50, 'long, pixelated cubes and short, choppy waves' on the 1,000). Serial numbers and small caps lettering ('FEMTI KRONER', 'NOREGS BANK') run along the edges. The lesson for a product: let amount or risk drive a visual variable systematically, and let numbers be ornament"
+avoid = "Pixel mosaics as decoration without the mapping to a real quantity would be a theme, not a language"
+tags = ["source:banknotes", "colour:per-denomination", "pattern:data-driven-ornament"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/old.snohetta.com-projects-406-new-banknote-design-for-norges-bank__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "stripe-press"
+name = "Stripe Press"
+url = "https://press.stripe.com"
+verdict = "exemplar"
+angle = "outside"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "Book publishing (a payments company's imprint, but the discipline is the printed book): a stack of 3D spines on near-black #201819, each with its own material (marbled endpaper, gold foil, kraft card, cracked plaster), set in Ivar Headline and Ivar Text with author and title on the spine as a printer would. Proves money can carry a literary serif and physical materials, not only fintech sans and gradients"
+avoid = "The 3D stack needs WebGL and gives little to scan; it is a brand flourish, not a pattern for a product page"
+tags = ["source:book-spines", "type:literary-serif"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/press.stripe.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "payora-framer-template"
+name = "Payora (Framer template)"
+url = "https://payora.framer.website/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 1
+seen = "2026-11-04"
+avoid = "The fintech template in one screen: an eyebrow pill 'Seamless Banking' over a centred 72px Bricolage Grotesque headline 'Financial Infrastructure for Modern Business' (Stripe's headline with the nouns sanded off), glowing blue pill buttons with circled arrows, a row of five avatar faces 'Trusted by 90K Businesses', and a dark dashboard mock greeting 'Good evening, Alex' with a waving-hand emoji and '$58,420.00 Total Portfolio Value'. Lower down the numbers contradict each other: '60+ Businesses Served' after '90K Businesses', '40% Platform Uptime', and testimonials from 'Sarah Johnson, Manager' with no company"
+tags = ["slop:eyebrow-pill", "slop:avatar-stack", "slop:placeholder-stats"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/payora.framer.website__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "finetech-framer-template"
+name = "Finetech (Framer template)"
+url = "https://fintechai.framer.website/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 1
+seen = "2026-11-04"
+avoid = "Consumer-app slop: 'Save it. Send it. Track it.' as a three-beat headline with an app icon dropped between words, a floating phone showing a glossy blue card ('Sydney Sweedy', '$12,340.00'), a stock woman laughing at her phone with a chromatic-aberration filter, a sky-and-grass backdrop, '+25K' avatar stack. The copy contradicts itself: the product is 'FintechAI' in one place and 'FinanceAI' in another, 'Getting Starting is Easy!', and a testimonial about 'my team's workflow' on a personal finance app"
+tags = ["slop:three-beat-headline", "slop:floating-phone", "slop:stock-laughing"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/fintechai.framer.website__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "fintechx-framer-template"
+name = "FintechX (Framer template)"
+url = "https://fintechx-wbs.framer.website/"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 1
+seen = "2026-11-04"
+avoid = "AI-era investing slop: 'Finance [glossy 3D AI tile] Platform' as the headline, sky with clouds and green hills, a gradient pill 'Get started now' with a nested arrow button, a badge row '4.9/5 Rating | Bank-level security | Real-time AI insights', and a dashboard of donut and area charts with '$58,420.00' (the same number as the Payora mock). Stats with no source ('68%', '+32% Faster', '99.9% platform uptime'), pricing tiers with no prices, 'support@yourbrand.com' left in"
+tags = ["slop:ai-badge", "slop:dashboard-mock", "slop:sky-hills"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/fintechx-wbs.framer.website__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "national-funding"
+name = "National Funding"
+url = "https://www.nationalfunding.com"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+avoid = "The dated direct-lender look: condensed Anton caps headline with an exclamation mark ('Most lenders see a risk. We see a business owner!') followed by 'That's not a tagline. It's how we operate.', an orange diagonal slab and thin orange lines over a dark workshop photo, orange (#d74000) 'Apply now' repeated down the page, and a badge row (Trustpilot, Google 4.5, BBB A+, Inc. 5000). Amounts are given ('$6,000 to $500,000*') but no rate, APR or cost appears anywhere; terms only. Credit is the one honest part: it names a real customer (Armando, Tool Repair & Construction, Dallas, TX) and 'Most of our customers have a personal FICO of 600 or higher'"
+tags = ["slop:badge-row", "slop:speed-over-cost", "type:condensed-caps-shout"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.nationalfunding.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "ondeck"
+name = "OnDeck"
+url = "https://www.ondeck.com"
+verdict = "counter"
+angle = "direct"
+evidence = "screenshot"
+score = 2
+seen = "2026-11-04"
+avoid = "Friendly-lender template from about 2019: Poppins bold on royal blue #000082, mint circles and a half-circle mask around a smiling bakery couple in aprons, pill buttons for 'Why do you need funding?'. Speed is the headline ('Get funds as soon as 24 hours later'), and the cost hides in a footnote: 'The average rate for term loans is 53.2% APR and the average rate for lines of credit is 59.8% APR'. The section 'Trusted by thousands of business owners like you' has no testimonials in it"
+tags = ["slop:blob-mask-photo", "slop:cost-in-footnote"]
+shots = "domains/fintech/shots/2026-11-04T11-22-28/www.ondeck.com__desktop__motion__fold.png"
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "biz2credit"
+name = "Biz2Credit"
+url = "https://www.biz2credit.com"
+verdict = "counter"
+angle = "direct"
+evidence = "visited"
+score = 2
+seen = "2026-11-04"
+avoid = "Read as text only (the renderer got a CloudFront 403, WebFetch got the page): trademarked slogan hero ('Funding what's next™'), every product card gives a range ('$25K-$2M+') and no rate or APR ('reasonable rates and terms'), two different lifetime totals on one page ('more than $12 billion' and '+$8B'), and a testimonial card whose quote belongs to the next person. Imagery not seen"
+tags = ["slop:range-not-rate", "slop:inconsistent-totals"]
+status = "active"
+added = "2026-11-04"
+
+[[ref]]
+id = "robinhood-eu"
+name = "Robinhood EU"
+url = "https://robinhood.com/eu/en/"
+verdict = "exemplar"
+angle = "direct"
+evidence = "screenshot"
+score = 4
+seen = "2026-11-04"
+take = "A book serif for an investing headline: 'One place for all your investments' in Martina Plantijn at about 96px, centred over a dark, slow liquid-metal texture, with Capsule Sans for body and one olive-lime accent (#80991a in my dimmed shot) on 'Sign up'. Risk lines are written plainly: 'Classic Stock Tokens carry a high level of risk and are not appropriate for all investors'"
+avoid = "The 3D liquid backdrop drifts towards abstract render territory; this is the EU site (Bank of Lithuania as regulator), so US disclosures were not seen"
+tags = ["type:serif-display", "colour:dark-ground"]
+shots = "domains/fintech/shots/2026-11-04T11-18-37/robinhood.com-us-en__desktop__motion__fold.png"
+notes = "Requested https://robinhood.com/us/en/ and was redirected to /eu/en/ from Ireland"
+status = "active"
+added = "2026-11-04"

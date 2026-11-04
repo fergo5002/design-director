@@ -765,8 +765,26 @@ def plan(dom: dict, stakes: str = "medium", today=None) -> dict:
 _WORD = re.compile(r"[a-z0-9]+")
 
 
+def _canon(w: str) -> str:
+    """One form for a word and its plural on both sides of a match: cottage and cottages,
+    guesthouse and guesthouses, agency and agencies, book and booking."""
+    if len(w) <= 3:
+        return w
+    if w.endswith("ies") and len(w) > 4:
+        w = w[:-3] + "i"
+    elif w.endswith("s") and not w.endswith("ss"):
+        w = w[:-1]
+    if w.endswith("ing") and len(w) - 3 >= 3:
+        w = w[:-3]
+    if w.endswith("e") and len(w) > 3:
+        w = w[:-1]
+    if w.endswith("y") and len(w) > 3:
+        w = w[:-1] + "i"
+    return w
+
+
 def _stems(s: str) -> list[str]:
-    return [sources._stem(w) for w in _WORD.findall((s or "").lower())]
+    return [_canon(w) for w in _WORD.findall((s or "").lower())]
 
 
 def _phrase_in(phrase: str, brief_stems: list[str]) -> bool:
@@ -791,8 +809,8 @@ def match(brief: str, today=None) -> dict:
             if _phrase_in(k, b):
                 score += 2
                 hits.append(k)
-        for t in set(_stems(m.get("title", ""))) - {sources._stem(x) for x in STOP}:
-            if t in b and t not in {sources._stem(h) for h in hits}:
+        for t in set(_stems(m.get("title", ""))) - {_canon(x) for x in STOP}:
+            if t in b and t not in {x for h in hits for x in _stems(h)}:
                 score += 1
                 hits.append(t)
         if score >= 2:
@@ -878,11 +896,11 @@ def audit_all(today=None, online=False) -> list[dict]:
                           "detail": "fewer than three keywords, so briefs will not match it",
                           "fix": "add the words a person would use to describe this work"})
     for i, a in enumerate(doms):
-        ka = {sources._stem(k) for k in a["meta"].get("keywords", [])}
+        ka = {" ".join(_stems(k)) for k in a["meta"].get("keywords", [])}
         for b in doms[i + 1:]:
             if a["meta"].get("kind") != b["meta"].get("kind"):
                 continue
-            kb = {sources._stem(k) for k in b["meta"].get("keywords", [])}
+            kb = {" ".join(_stems(k)) for k in b["meta"].get("keywords", [])}
             if ka and kb and len(ka & kb) / len(ka | kb) >= 0.5:
                 found.append({"domain": a["slug"], "kind": "overlap", "ref": None,
                               "detail": f"{a['slug']} and {b['slug']} share most of their keywords",

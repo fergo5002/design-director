@@ -241,7 +241,12 @@ for (const url of urls) {
       for (const [i, label] of walk.entries()) {
         const step = { label, ok: false };
         if (FORBIDDEN.test(label)) { step.note = 'refused: a teardown never buys, books, signs up or logs in'; rec.walk.push(step); break; }
-        const target = page.getByRole('link', { name: label }).or(page.getByRole('button', { name: label })).or(page.getByText(label, { exact: false })).first();
+        // booking engines usually live in an iframe, so look in every frame, the page first
+        const find = (fr) => fr.getByRole('link', { name: label }).or(fr.getByRole('button', { name: label })).or(fr.getByText(label, { exact: false })).first();
+        let target = find(page);
+        if (!(await target.count().catch(() => 0))) {
+          for (const fr of page.frames().slice(1)) { const t = find(fr); if (await t.count().catch(() => 0)) { target = t; step.frame = fr.url().slice(0, 80); break; } }
+        }
         try {
           // a control submits only when it has a form to submit; a bare <button> reports type "submit" anyway
           const isSubmit = await target.evaluate((el) => !!el.form && ['submit', 'image'].includes(el.type)).catch(() => false);
@@ -294,10 +299,10 @@ for (const url of urls) {
     `- h1: ${line('h1')}${r.h1 ? ` "${r.h1.text}"` : ''}`, `- h2: ${line('h2')}`, `- body: ${line('body')}`, `- buttons: ${line('button')}`, `- nav: ${line('nav')}`,
     `- Backgrounds by area: ${fmt(d.colour && d.colour.backgrounds)}`, `- Text colours: ${fmt(d.colour && d.colour.text)}`, `- Control colours: ${fmt(d.colour && d.colour.accents)}; ${d.colour && d.colour.distinct} distinct colours`,
     `- Radii: ${fmt(d.shape && d.shape.radii) || 'square'}; ${d.shape && d.shape.shadowedElements} shadowed elements`,
-    `- Section padding median ${d.space && d.space.sectionPaddingMedian}px; paragraph width median ${d.space && d.space.paragraphWidthMedian}px; gaps ${fmt(d.space && d.space.gaps)}`,
+    `- Section padding median ${d.space && d.space.sectionPaddingMedian != null ? d.space.sectionPaddingMedian + 'px' : 'n/a (no section blocks found)'}; paragraph width median ${d.space && d.space.paragraphWidthMedian}px; gaps ${fmt(d.space && d.space.gaps)}`,
     `- Motion: transitions ${fmt(d.motion && d.motion.transitions) || 'none'}; ${d.motion && d.motion.cssAnimations} CSS animations; libraries ${(d.motion && d.motion.libraries || []).join(', ') || 'none'}; ${d.motion && d.motion.videos.length} videos; ${d.motion && d.motion.canvases} canvases; reduced-motion rules ${d.motion && d.motion.reducedMotionRules ? 'yes' : 'no'}`,
     `- Stack: ${(d.stack || []).join(', ') || 'unknown'}`,
-    `- Nav: ${(d.structure && d.structure.navLabels || []).join(' | ')}`,
+    `- Nav: ${(d.structure && d.structure.navLabels || []).join(' | ') || 'none found in nav or header (look at the fold)'}`,
     `- Calls to action: ${(d.structure && d.structure.ctas || []).join(' | ')}; one above the fold: ${d.structure && d.structure.ctaAboveFold ? 'yes' : 'no'}; phone number in header: ${d.structure && d.structure.phoneInHeader ? 'yes' : 'no'}`,
     `- Outline: ${(d.structure && d.structure.headings || []).slice(0, 12).join(' / ')}`,
     `- Generated-design tells: ${tells.join('; ') || 'none measured (that does not make it good)'}`,

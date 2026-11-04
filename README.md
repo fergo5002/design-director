@@ -72,7 +72,7 @@ ddr init        # creates .design/ with your house taste, a reference ledger and
 
 ```bash
 ddr domain match "a booking site for self-catering cottages near Dublin"
-#  Sector   independent-stays   confidence  71/100 strong   (matched: self catering, cottage)
+#  Sector   independent-stays   confidence  76/100 strong   (matched: self catering, cottage)
 #  Pattern  onboarding ...
 ddr domain brief independent-stays     # dossier, best exemplars and their takes, counter-examples, ledger
 ddr domain status independent-stays    # the score, every part of it, and what would raise it

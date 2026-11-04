@@ -539,5 +539,15 @@ class ReviewFindings(Base):
         with self.assertRaises(ValueError):
             self.d.reverify("wellness", "loyly", score=9)
 
+
+class Matching(Base):
+    def test_plurals_match_singular_keywords_both_ways(self):
+        self.d.create("stays", "Independent stays", "sector",
+                      keywords=["cottage", "guesthouse", "holiday home", "agency", "lodges"])
+        for brief in ("stone holiday cottages by a river", "a site for two guesthouses", "holiday homes in Kerry",
+                      "letting agencies", "a lodge in the hills"):
+            res = self.d.match(brief)
+            self.assertTrue(res["sectors"] and res["sectors"][0]["slug"] == "stays", brief)
+
 if __name__ == "__main__":
     unittest.main()

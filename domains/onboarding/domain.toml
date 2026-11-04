@@ -1,0 +1,12 @@
+slug = "onboarding"
+title = "Onboarding and signup flows"
+kind = "pattern"
+summary = "The first minutes of a product, from the signup form through verification and setup to the first useful moment, in any sector"
+keywords = ["onboarding", "signup", "sign up", "registration", "account creation", "kyc", "identity verification", "verification", "first run", "setup", "welcome", "activation", "empty state", "getting started", "invite"]
+aliases = ["user onboarding", "signup flow", "first time user experience"]
+created = "2026-11-04"
+updated = "2026-11-04"
+
+[[related]]
+slug = "fintech"
+how = "identity and bank checks before the first useful moment"

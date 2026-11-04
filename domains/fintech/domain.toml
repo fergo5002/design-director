@@ -1,0 +1,12 @@
+slug = "fintech"
+title = "Fintech and lending"
+kind = "sector"
+summary = "Money products for people and businesses, including lending, business banking, cards, payments, investing and financing"
+keywords = ["fintech", "lending", "loan", "credit", "bank", "banking", "neobank", "business account", "payments", "card", "financing", "invoice", "treasury", "investing", "wealth"]
+aliases = ["revenue based financing", "small business lending", "embedded finance", "credit union"]
+created = "2026-11-04"
+updated = "2026-11-04"
+
+[[related]]
+slug = "onboarding"
+how = "identity and bank checks before the first useful moment"
