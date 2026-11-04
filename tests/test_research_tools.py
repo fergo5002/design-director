@@ -142,6 +142,7 @@ class TeardownLive(unittest.TestCase):
         self.assertEqual(s["eyebrows"], 1)
         self.assertGreaterEqual(s["gradientText"], 1)
         self.assertEqual(s["iconCardTriads"], 1)
+        self.assertEqual(s["defaultControls"], 2)
 
     def test_walk_clicks_safe_controls_and_refuses_submit(self):
         walk = self.rec["walk"]

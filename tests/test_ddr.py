@@ -212,7 +212,8 @@ class Routing(unittest.TestCase):
         other = self.home / ".claude" / "skills" / "frontend-design"
         other.mkdir(parents=True)
         (other / "SKILL.md").write_text("theirs")
-        self.quiet(self.ddr.install, ["--agent", "claude"])
+        self.quiet(self.ddr.install, ["--agent", "claude,codex"])
+        self.assertTrue((self.home / ".codex" / "AGENTS.md").exists())
         data = self.home / ".design-director" / "domains" / "x"
         data.mkdir(parents=True)
         rc, out = self.quiet(self.ddr.uninstall, [])
@@ -221,6 +222,7 @@ class Routing(unittest.TestCase):
             self.assertFalse((self.home / ".claude" / "skills" / s).exists(), s)
         self.assertTrue(other.exists())
         self.assertEqual(md.read_text().strip(), "# Mine")
+        self.assertFalse((self.home / ".codex" / "AGENTS.md").exists(), "a file holding only our block is removed")
         self.assertTrue(data.exists(), "domain data must survive uninstall")
         if os.name != "nt":
             self.assertFalse((self.home / ".local" / "bin" / "ddr").exists())

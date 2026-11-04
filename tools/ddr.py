@@ -141,7 +141,10 @@ def _route(agent: str, remove: bool = False) -> str:
     base = _strip_block(old)
     if remove:
         if base != old:
-            target.write_text(base.rstrip() + "\n" if base.strip() else "", encoding="utf-8")
+            if base.strip():
+                target.write_text(base.rstrip() + "\n", encoding="utf-8")
+            else:
+                target.unlink()   # it held nothing but our block
             return f"[{agent}] removed the routing block from {target}"
         return ""
     block = f"{BLOCK_BEGIN}\n{ROUTING}\n{BLOCK_END}\n"
@@ -347,10 +350,11 @@ def doctor(argv):
         print(f"  competing    [{c['agent']}] skill {c['name']}: {c['description']}")
     for r in found["rules"][:12]:
         print(f"  your rule    {r['file']}:{r['line_no']}: {r['line']}")
-    if found["skills"] or found["rules"]:
+    if found["rules"]:
         print("               Specific rules for a project should win. Generic defaults (\"use Inter\", \"use shadcn defaults\",\n"
-              "               a fixed palette for everything) make every design look the same: edit or delete them.\n"
-              "               Other design skills are fine to keep; the routing block tells your agent design-director leads.")
+              "               a fixed palette for everything) make every design look the same: edit or delete them.")
+    if found["skills"]:
+        print("               Other design skills are fine to keep; the routing block tells your agent design-director leads.")
     entries = sources.load()
     errs = sources.validate(entries, sources.categories())
     ok &= not errs

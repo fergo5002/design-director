@@ -77,8 +77,12 @@ function measure() {
     const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
     if (own) bump(fg, rgb(s.color), own.length);
   }
-  for (const el of [...document.querySelectorAll('button, a[class*="btn" i], a[class*="button" i], [role="button"], input[type="submit"]')].filter(vis).slice(0, 60)) {
-    const s = getComputedStyle(el); bump(accent, rgb(s.backgroundColor) || rgb(s.color), 1);
+  // controls weighted by painted area; an unstyled browser-default control is a tell, not an accent
+  let defaultControls = 0;
+  for (const el of [...document.querySelectorAll('button, a[class*="btn" i], a[class*="button" i], [role="button"], input[type="submit"], input[type="button"]')].filter(vis).slice(0, 60)) {
+    const s = getComputedStyle(el); const r = el.getBoundingClientRect(); const c = rgb(s.backgroundColor);
+    if (c === '#efefef' || c === '#e9e9ed' || c === '#f0f0f0') { defaultControls++; continue; }
+    bump(accent, c || rgb(s.color), r.width * r.height);
   }
 
   // shape and space
@@ -138,7 +142,7 @@ function measure() {
   const glass = all.filter((el) => { const s = getComputedStyle(el); return (s.backdropFilter || s.webkitBackdropFilter || 'none') !== 'none'; }).length;
   const emojiHeadings = [...document.querySelectorAll('h1,h2,h3,h4')].filter((h) => /\p{Extended_Pictographic}/u.test(h.innerText || '')).length;
   const triads = [...document.querySelectorAll('div, ul, section')].filter((el) => { const k = [...el.children]; return k.length === 3 && k.every((c) => c.tagName === k[0].tagName && c.className === k[0].className) && k.every((c) => c.querySelector('svg, img') && c.querySelector('h3, h4, strong')); }).length;
-  const slop = { words: SLOP_WORDS.filter((w) => text.includes(w)), eyebrows, gradientText, purpleGradients, glass, emojiHeadings, iconCardTriads: triads };
+  const slop = { words: SLOP_WORDS.filter((w) => text.includes(w)), eyebrows, gradientText, purpleGradients, glass, emojiHeadings, iconCardTriads: triads, defaultControls };
 
   return {
     title: document.title, lang: document.documentElement.lang, words, screens: +(document.documentElement.scrollHeight / vh).toFixed(1),
@@ -210,7 +214,8 @@ for (const url of urls) {
         if (FORBIDDEN.test(label)) { step.note = 'refused: a teardown never buys, books, signs up or logs in'; rec.walk.push(step); break; }
         const target = page.getByRole('link', { name: label }).or(page.getByRole('button', { name: label })).or(page.getByText(label, { exact: false })).first();
         try {
-          const isSubmit = await target.evaluate((el) => el.type === 'submit' || !!el.closest('form') && el.tagName === 'BUTTON').catch(() => false);
+          // a control submits only when it has a form to submit; a bare <button> reports type "submit" anyway
+          const isSubmit = await target.evaluate((el) => !!el.form && ['submit', 'image'].includes(el.type)).catch(() => false);
           if (isSubmit) { step.note = 'refused: that control submits a form'; rec.walk.push(step); break; }
           await target.click({ timeout: 6000 });
           await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
@@ -233,7 +238,7 @@ for (const url of urls) {
   const line = (k) => (r[k] ? `${r[k].family} ${r[k].size}/${r[k].lineHeight} weight ${r[k].weight}${r[k].tracking !== 'normal' ? ' tracking ' + r[k].tracking : ''}${r[k].transform !== 'none' ? ' ' + r[k].transform : ''}` : 'none found');
   const s = d.slop || {};
   const tells = [s.words && s.words.length ? `stock copy (${s.words.join(', ')})` : '', s.eyebrows ? `${s.eyebrows} eyebrows` : '', s.gradientText ? `${s.gradientText} gradient-text elements` : '',
-    s.purpleGradients ? 'purple-blue gradients' : '', s.glass ? `${s.glass} glass (backdrop-filter) elements` : '', s.emojiHeadings ? `${s.emojiHeadings} emoji headings` : '', s.iconCardTriads ? `${s.iconCardTriads} icon-card triads` : ''].filter(Boolean);
+    s.purpleGradients ? 'purple-blue gradients' : '', s.glass ? `${s.glass} glass (backdrop-filter) elements` : '', s.emojiHeadings ? `${s.emojiHeadings} emoji headings` : '', s.iconCardTriads ? `${s.iconCardTriads} icon-card triads` : '', s.defaultControls ? `${s.defaultControls} browser-default controls` : ''].filter(Boolean);
   const md = [
     `# Teardown: ${url}`, '', `Captured ${rec.captured}. Folder: ${dir}`, d.error ? `\nProblem: ${d.error}` : '', '',
     '## Look at these first', '', ...rec.files.map((f) => `- ${f}`), '',

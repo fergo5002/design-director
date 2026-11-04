@@ -100,8 +100,11 @@ for (const url of urls) {
       const t0 = Date.now();
       let status = null;
       try {
-        const res = await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+        // Wait for the document, then give the network a bounded chance to settle: analytics-heavy
+        // sites never go fully idle, and waiting for them turned every render into a 45s timeout.
+        const res = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
         status = res && res.status();
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       } catch (e) {
         consoleErrors.push(`navigation: ${e.message.split('\n')[0]}`);
       }
