@@ -75,5 +75,32 @@ class Cli(unittest.TestCase):
                 self.assertEqual(taste.main(["win", "b", "--tags", "type:y", "--file", f]), 0)
             self.assertEqual(len(taste.read(f)), 2)
 
+
+class DomainMirror(unittest.TestCase):
+    def test_global_path_follows_ddr_home_and_domain_flag_feeds_the_domain(self):
+        import os, importlib, io, contextlib, domains
+        with tempfile.TemporaryDirectory() as d:
+            old = os.environ.get("DDR_HOME"); old_dd = os.environ.pop("DD_TASTE", None)
+            os.environ["DDR_HOME"] = d
+            try:
+                importlib.reload(domains)
+                domains.SEEDS = pathlib.Path(d) / "no-seeds"
+                self.assertEqual(taste.default_path(True), pathlib.Path(d) / "taste.jsonl")
+                domains.create("fintech", "Fintech", "sector", keywords=["fintech", "loan", "bank"])
+                with contextlib.redirect_stdout(io.StringIO()):
+                    rc = taste.main(["shipped", "--global", "--what", "Pricing page", "--tags", "type:grotesk",
+                                     "--domain", "fintech"])
+                self.assertEqual(rc, 0)
+                led = domains.load("fintech")["ledger"]
+                self.assertEqual(led[-1]["kind"], "shipped")
+                self.assertEqual(led[-1]["what"], "Pricing page")
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    rc = taste.main(["win", "--global", "--what", "x", "--domain", "nope"])
+                self.assertEqual(rc, 2)
+            finally:
+                if old is None: os.environ.pop("DDR_HOME", None)
+                else: os.environ["DDR_HOME"] = old
+                if old_dd is not None: os.environ["DD_TASTE"] = old_dd
+
 if __name__ == "__main__":
     unittest.main()

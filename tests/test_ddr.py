@@ -140,5 +140,119 @@ class Init(unittest.TestCase):
             finally:
                 os.chdir(cwd)
 
+
+class Routing(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = pathlib.Path(self.tmp.name)
+        self.old_home = os.environ.get("HOME")
+        self.old_ddr = os.environ.get("DDR_HOME")
+        os.environ["DDR_HOME"] = str(self.home / ".design-director")
+        self.ddr = fresh(self.home)
+
+    def tearDown(self):
+        os.environ["HOME"] = self.old_home
+        if self.old_ddr is None:
+            os.environ.pop("DDR_HOME", None)
+        else:
+            os.environ["DDR_HOME"] = self.old_ddr
+        self.tmp.cleanup()
+
+    def quiet(self, fn, argv):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = fn(argv)
+        return rc, out.getvalue()
+
+    def test_routing_block_is_added_once_and_keeps_the_users_text(self):
+        md = self.home / ".claude" / "CLAUDE.md"
+        md.parent.mkdir(parents=True)
+        md.write_text("# Mine\n\nAlways use tabs.\n")
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        text = md.read_text()
+        self.assertIn("Always use tabs.", text)
+        self.assertEqual(text.count(self.ddr.BLOCK_BEGIN), 1)
+        self.assertIn("design-director", text.split(self.ddr.BLOCK_BEGIN)[1])
+
+    def test_routing_for_codex_goes_in_agents_md(self):
+        self.quiet(self.ddr.install, ["--agent", "codex"])
+        self.assertIn(self.ddr.BLOCK_BEGIN, (self.home / ".codex" / "AGENTS.md").read_text())
+
+    def test_stale_block_is_refreshed(self):
+        md = self.home / ".claude" / "CLAUDE.md"
+        md.parent.mkdir(parents=True)
+        md.write_text(f"top\n{self.ddr.BLOCK_BEGIN}\nold words\n{self.ddr.BLOCK_END}\nbottom\n")
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        text = md.read_text()
+        self.assertNotIn("old words", text)
+        self.assertTrue(text.startswith("top"))
+        self.assertTrue(text.rstrip().endswith("bottom"))
+
+    def test_no_routing_flag(self):
+        self.quiet(self.ddr.install, ["--agent", "claude", "--no-routing"])
+        md = self.home / ".claude" / "CLAUDE.md"
+        self.assertFalse(md.exists() and self.ddr.BLOCK_BEGIN in md.read_text())
+
+    def test_no_routing_when_their_own_design_director_is_kept(self):
+        mine = self.home / ".claude" / "skills" / "design-director"
+        mine.mkdir(parents=True)
+        (mine / "SKILL.md").write_text("my own")
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        md = self.home / ".claude" / "CLAUDE.md"
+        self.assertFalse(md.exists() and self.ddr.BLOCK_BEGIN in md.read_text())
+
+    def test_install_creates_the_domain_home(self):
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        self.assertTrue((self.home / ".design-director" / "domains").is_dir())
+
+    def test_uninstall_removes_only_what_install_made(self):
+        md = self.home / ".claude" / "CLAUDE.md"
+        md.parent.mkdir(parents=True)
+        md.write_text("# Mine\n")
+        other = self.home / ".claude" / "skills" / "frontend-design"
+        other.mkdir(parents=True)
+        (other / "SKILL.md").write_text("theirs")
+        self.quiet(self.ddr.install, ["--agent", "claude,codex"])
+        self.assertTrue((self.home / ".codex" / "AGENTS.md").exists())
+        data = self.home / ".design-director" / "domains" / "x"
+        data.mkdir(parents=True)
+        rc, out = self.quiet(self.ddr.uninstall, [])
+        self.assertEqual(rc, 0)
+        for s in self.ddr.SKILLS:
+            self.assertFalse((self.home / ".claude" / "skills" / s).exists(), s)
+        self.assertTrue(other.exists())
+        self.assertEqual(md.read_text().strip(), "# Mine")
+        self.assertFalse((self.home / ".codex" / "AGENTS.md").exists(), "a file holding only our block is removed")
+        self.assertTrue(data.exists(), "domain data must survive uninstall")
+        if os.name != "nt":
+            self.assertFalse((self.home / ".local" / "bin" / "ddr").exists())
+
+    def test_conflicts_finds_rival_skills_and_design_rules(self):
+        rival = self.home / ".claude" / "skills" / "frontend-design"
+        rival.mkdir(parents=True)
+        (rival / "SKILL.md").write_text("---\nname: frontend-design\ndescription: Create beautiful UI and landing pages\n---\n")
+        unrelated = self.home / ".claude" / "skills" / "git-helper"
+        unrelated.mkdir(parents=True)
+        (unrelated / "SKILL.md").write_text("---\nname: git-helper\ndescription: Commit messages\n---\n")
+        md = self.home / ".claude" / "CLAUDE.md"
+        md.write_text("Use tabs.\nAlways use Inter and a purple gradient for landing pages.\n"
+                      "Grill me on the real design and implementation forks (data model, UX, edge cases).\n"
+                      "British English: colour, organise, realise.\n"
+                      "A getComputedStyle check reported a stale colour.\n")
+        video = self.home / ".claude" / "skills" / "video"
+        video.mkdir(parents=True)
+        (video / "SKILL.md").write_text("---\nname: video\ndescription: Films and promos. Small motion inside a site goes to design-director.\n---\n")
+        self.quiet(self.ddr.install, ["--agent", "claude"])
+        found = self.ddr.conflicts()
+        names = [c["name"] for c in found["skills"]]
+        self.assertIn("frontend-design", names)
+        self.assertNotIn("git-helper", names)
+        self.assertNotIn("design-director", names)
+        self.assertNotIn("video", names, "mentioning design-director is not competing with it")
+        self.assertTrue(any("Inter" in l["line"] for l in found["rules"]))
+        self.assertEqual(len(found["rules"]), 1, [l["line"] for l in found["rules"]])
+        self.assertFalse(any("design-director skill" in l["line"] for l in found["rules"]),
+                         "our own block must not count as a conflict")
+
 if __name__ == "__main__":
     unittest.main()

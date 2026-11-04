@@ -10,6 +10,7 @@ claude = "claude mcp add playwright -- npx @playwright/mcp@latest"
 codex = "[mcp_servers.playwright]\ncommand = \"npx\"\nargs = [\"@playwright/mcp@latest\"]"
 cursor = "\"playwright\": { \"command\": \"npx\", \"args\": [\"@playwright/mcp@latest\"] }"
 docs = "https://github.com/microsoft/playwright-mcp"
+research = true
 tier = "core"
 why = "The agent opens its own page, clicks through flows and screenshots it at set viewport sizes."
 
@@ -22,6 +23,7 @@ codex = "[mcp_servers.chrome-devtools]\ncommand = \"npx\"\nargs = [\"-y\", \"chr
 cursor = "\"chrome-devtools\": { \"command\": \"npx\", \"args\": [\"-y\", \"chrome-devtools-mcp@latest\", \"--no-usage-statistics\"] }"
 docs = "https://github.com/ChromeDevTools/chrome-devtools-mcp"
 needs = "Sends usage statistics and CrUX lookups by default; add --no-usage-statistics --no-performance-crux to switch off."
+research = true
 tier = "core"
 why = "Performance traces, LCP and layout shift, console and network for the agent's own pages."
 
@@ -47,6 +49,19 @@ cursor = "\"shadcn\": { \"command\": \"npx\", \"args\": [\"shadcn@latest\", \"mc
 docs = "https://ui.shadcn.com/docs/mcp"
 tier = "core"
 why = "Search and install components from shadcn and any shadcn-compatible registry by plain request. Check each registry's licence in the catalogue."
+
+[[server]]
+id = "exa"
+name = "Exa MCP (official, remote)"
+catalogue = "exa-mcp"
+claude = "claude mcp add --transport http exa https://mcp.exa.ai/mcp"
+codex = "codex mcp add exa --url https://mcp.exa.ai/mcp"
+cursor = "\"exa\": { \"url\": \"https://mcp.exa.ai/mcp\" }"
+docs = "https://github.com/exa-labs/exa-mcp-server"
+needs = "Works without a key at low rate limits; sign in with OAuth for more. Add ?tools=web_search_advanced_exa for domain and date filters."
+research = true
+tier = "recommended"
+why = "Search by description ('cottage rental sites with editorial photography and the calendar up front'), which is how design references are actually found."
 
 [[server]]
 id = "figma"
@@ -81,6 +96,7 @@ codex = "[mcp_servers.firecrawl]\nurl = \"https://mcp.firecrawl.dev/v2/mcp\""
 cursor = "\"firecrawl\": { \"url\": \"https://mcp.firecrawl.dev/v2/mcp\" }"
 docs = "https://github.com/firecrawl/firecrawl-mcp-server"
 needs = "Respect each site's terms; use it to study a reference, never to clone a brand."
+research = true
 tier = "recommended"
 why = "Extract a reference site's colours, fonts, type scale, spacing and radius as JSON with formats [\"branding\"]. Keyless endpoint is rate-limited."
 
@@ -116,6 +132,7 @@ codex = "codex mcp add mobbin --url https://api.mobbin.com/mcp && codex mcp logi
 cursor = "\"mobbin\": { \"url\": \"https://api.mobbin.com/mcp\" }"
 docs = "https://docs.mobbin.com/mcp/introduction"
 needs = "Mobbin Pro, Team or Enterprise. OAuth on first use. Avoid unofficial Mobbin MCPs that ask for your session credentials."
+research = true
 tier = "optional"
 why = "Search real shipped app screens, flows and website sections; the single biggest upgrade for product UI work."
 
@@ -127,6 +144,7 @@ claude = "claude plugin marketplace add referodesign/refero_skill && claude plug
 codex = "codex plugin marketplace add referodesign/refero_skill && codex plugin add refero@refero"
 docs = "https://github.com/referodesign/refero_skill"
 needs = "Paid Refero plan for live search."
+research = true
 tier = "optional"
 why = "Research-first design: pulls real screens, flows and styles from Refero before building. The bundled craft references work without an account."
 
@@ -257,3 +275,30 @@ docs = "https://github.com/ahujasid/mcp-for-blender"
 needs = "Community project, not affiliated with the Blender Foundation. Runs code inside Blender: review before use."
 tier = "optional"
 why = "3D scenes and renders driven by the agent, for hero objects and product shots."
+
+[[server]]
+id = "brave-search"
+name = "Brave Search MCP (official)"
+catalogue = "brave-search-mcp"
+claude = "claude mcp add brave-search -e BRAVE_API_KEY=<key> -- npx -y @brave/brave-search-mcp-server"
+codex = "[mcp_servers.brave-search]\ncommand = \"npx\"\nargs = [\"-y\", \"@brave/brave-search-mcp-server\"]\nenv = { BRAVE_API_KEY = \"<key>\" }"
+cursor = "\"brave-search\": { \"command\": \"npx\", \"args\": [\"-y\", \"@brave/brave-search-mcp-server\"], \"env\": { \"BRAVE_API_KEY\": \"<key>\" } }"
+docs = "https://github.com/brave/brave-search-mcp-server"
+needs = "A Brave Search API key and plan. Local search needs Pro."
+research = true
+tier = "optional"
+why = "Local business and image search: the best-reviewed independents in a town or a trade, which galleries never show."
+
+[[server]]
+id = "tavily"
+name = "Tavily MCP (official, remote)"
+catalogue = "tavily-mcp"
+claude = "claude mcp add --transport http tavily https://mcp.tavily.com/mcp"
+codex = "[mcp_servers.tavily]\ncommand = \"npx\"\nargs = [\"-y\", \"mcp-remote\", \"https://mcp.tavily.com/mcp\"]"
+cursor = "\"tavily\": { \"command\": \"npx\", \"args\": [\"-y\", \"mcp-remote\", \"https://mcp.tavily.com/mcp\"] }"
+docs = "https://github.com/tavily-ai/tavily-mcp"
+needs = "Free Tavily account (OAuth on first use) with monthly credits."
+research = true
+tier = "optional"
+why = "Fast candidate lists and clean page text for a category, when the agent has no web search of its own."
+
