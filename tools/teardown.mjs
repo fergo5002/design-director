@@ -19,7 +19,7 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const VALUED = ['--out', '--frames', '--walk', '--viewports', '--full-max'];
-const urls = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
+const urls = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1])).map((u) => (/^[a-z]+:\/\//i.test(u) ? u : 'https://' + u));
 if (!urls.length) {
   console.error('usage: node tools/teardown.mjs <url> [url...] [--out dir] [--frames 6] [--walk "A>B"] [--viewports desktop,phone] [--no-full]');
   process.exit(2);
@@ -46,7 +46,18 @@ const FORBIDDEN = /\b(pay|payment|purchase|checkout|place order|confirm|submit|c
 function measure() {
   const vw = window.innerWidth, vh = window.innerHeight;
   const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0.05; };
-  const rgb = (c) => { const m = c && c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); if (p.length > 3 && p[3] < 0.5) return null; return '#' + p.slice(0, 3).map((x) => Math.round(x).toString(16).padStart(2, '0')).join(''); };
+  const cvs = document.createElement('canvas'); cvs.width = cvs.height = 1; const cx = cvs.getContext('2d', { willReadFrequently: true });
+  const memo = new Map();
+  const rgb = (c) => {   // any CSS colour (rgb, oklch, lab, color()) through the canvas, so modern palettes are not dropped
+    if (!c || c === 'transparent' || c === 'rgba(0, 0, 0, 0)') return null;
+    if (memo.has(c)) return memo.get(c);
+    let out = null;
+    const m = c.match(/^rgba?\(([^)]+)\)$/);
+    if (m) { const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); out = p.length > 3 && p[3] < 0.5 ? null : '#' + p.slice(0, 3).map((x) => Math.round(x).toString(16).padStart(2, '0')).join(''); }
+    else { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data;
+      out = d[3] < 128 ? null : '#' + [d[0], d[1], d[2]].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+    memo.set(c, out); return out;
+  };
   const bump = (map, k, w) => { if (k) map.set(k, (map.get(k) || 0) + w); };
   const top = (map, n, total) => [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, w]) => ({ value: k, share: +(w / (total || 1)).toFixed(3) }));
   const all = [...document.querySelectorAll('body *')].slice(0, 6000).filter(vis);
@@ -235,6 +246,13 @@ for (const url of urls) {
           // a control submits only when it has a form to submit; a bare <button> reports type "submit" anyway
           const isSubmit = await target.evaluate((el) => !!el.form && ['submit', 'image'].includes(el.type)).catch(() => false);
           if (isSubmit) { step.note = 'refused: that control submits a form'; rec.walk.push(step); break; }
+          // matching is by substring, so judge the control that would actually be clicked
+          const resolved = await target.evaluate((el) => [el.innerText, el.value, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('href')]
+            .filter(Boolean).join(' ').trim().slice(0, 200)).catch(() => '');
+          step.resolved = resolved.slice(0, 80);
+          if (FORBIDDEN.test(resolved) || /\b(checkout|payment|signup|register|login|signin)\b/i.test(resolved)) {
+            step.note = `refused: "${label}" resolves to "${step.resolved}", which buys, books, signs up or logs in`; rec.walk.push(step); break;
+          }
           const before = await page.evaluate(() => location.href + '|' + document.body.innerText.length + '|' + document.body.innerText.slice(0, 2000));
           await target.click({ timeout: 6000 });
           await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});

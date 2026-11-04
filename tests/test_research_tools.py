@@ -11,9 +11,9 @@ class History(unittest.TestCase):
 
     def test_summarises_by_year_with_archive_links(self):
         s = history.summarise("example.com", self.ROWS)
-        self.assertEqual(s["versions"], 4)
+        self.assertEqual(s["months"], 4)
         self.assertEqual([y["year"] for y in s["years"]], ["2020", "2021", "2025"])
-        self.assertEqual(s["years"][1]["versions"], 2)
+        self.assertEqual(s["years"][1]["months"], 2)
         self.assertEqual(s["years"][1]["archive"], "https://web.archive.org/web/20210307053927/https://example.com")
 
     def test_empty_archive_says_so(self):
@@ -91,6 +91,26 @@ class Wrappers(unittest.TestCase):
         self.assertTrue(pngs[2].endswith("good.example/desktop__fold.png"))
         self.assertEqual(argv[argv.index("--labels") + 1], "Yours,Best,Good")
 
+    def test_sheet_finds_starter_shots_after_a_fork(self):
+        seeds = pathlib.Path(self.tmp.name) / "seeds"
+        sp = seeds / "wellness"; (sp / "shots" / "loyly.fi").mkdir(parents=True)
+        (sp / "shots" / "loyly.fi" / "desktop__fold.png").write_bytes(b"png")
+        (sp / "domain.toml").write_text('slug = "wellness"\ntitle = "W"\nkind = "sector"\nkeywords = ["sauna"]\n')
+        (sp / "refs.toml").write_text('[[ref]]\nid = "loyly"\nname = "Loyly"\nurl = "https://loyly.fi"\nverdict = "exemplar"\n'
+                                      'angle = "direct"\nevidence = "screenshot"\ntake = "t"\nscore = 4\nshots = "shots/loyly.fi"\n')
+        self.domains.SEEDS = seeds
+        self.domains.path_for_write("wellness")
+        shots = self.ddr._exemplar_shots(self.domains.load("wellness"), 3)
+        self.assertEqual([n for n, _ in shots], ["Loyly"])
+
+    def test_teardown_hint_ignores_full_max_value(self):
+        with mock.patch.object(self.ddr, "_which", return_value=True), \
+             mock.patch.object(self.ddr.subprocess, "call", return_value=0), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            self.ddr.teardown(["example.com", "--into", "stays", "--full-max", "6000"])
+        self.assertNotIn("--url 6000", out.getvalue())
+        self.assertIn("--url https://example.com", out.getvalue())
+
     def test_mcp_research_filter(self):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.ddr.mcp(["--research"])
@@ -111,7 +131,7 @@ class TeardownLive(unittest.TestCase):
         cls.out = tempfile.mkdtemp()
         fixture = pathlib.Path(__file__).resolve().parent / "fixtures" / "teardown.html"
         cls.proc = subprocess.run(["node", str(TOOLS / "teardown.mjs"), fixture.as_uri(), "--out", cls.out,
-                                   "--frames", "2", "--walk", "See prices>Does nothing>Submit booking"],
+                                   "--frames", "2", "--walk", "See prices>Does nothing>Continue>Submit booking"],
                                   capture_output=True, text=True, timeout=180)
         folder = next(pathlib.Path(cls.out).iterdir())
         cls.rec = json.loads((folder / "teardown.json").read_text())
@@ -130,6 +150,7 @@ class TeardownLive(unittest.TestCase):
     def test_palette_by_area_and_controls(self):
         self.assertEqual(self.d["colour"]["backgrounds"][0]["value"], "#f6f1e8")
         self.assertEqual(self.d["colour"]["accents"][0]["value"], "#1f4d3a")
+        self.assertIn("#8040bf", [b["value"] for b in self.d["colour"]["backgrounds"]], "CSS Color 4 values must not drop out")
 
     def test_structure_and_stack(self):
         self.assertIn("Check availability", " ".join(self.d["structure"]["ctas"]))
@@ -154,7 +175,8 @@ class TeardownLive(unittest.TestCase):
         self.assertTrue(walk[0]["changed"], walk)
         self.assertFalse(walk[1]["changed"], walk)
         self.assertIn("changed nothing", walk[1]["note"])
-        self.assertIn("refused", walk[2]["note"])
+        self.assertEqual(walk[2]["label"], "Continue")
+        self.assertIn("refused", walk[2]["note"], "a harmless label must not click 'Continue to payment'")
 
     def test_frames_and_folds_saved(self):
         names = {pathlib.Path(f).name for f in self.rec["files"]}

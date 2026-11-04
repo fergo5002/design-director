@@ -251,7 +251,8 @@ def _overlay_seed(dom: dict):
             dom["related"].append(dict(r, _layer="seed"))
     for k in ("keywords", "aliases"):
         mine = dom["meta"].get(k, [])
-        dom["meta"][k] = mine + [x for x in data.get(k, []) if x not in mine]
+        dropped = set(dom["meta"].get(f"dropped_{k}", []))
+        dom["meta"][k] = mine + [x for x in data.get(k, []) if x not in mine and x not in dropped]
     have = {norm_url(r["url"]) for r in dom["refs"]}
     if (seed / "refs.toml").exists():
         for r in sources.loads((seed / "refs.toml").read_text(encoding="utf-8")).get("ref", []):
@@ -268,9 +269,11 @@ def _combine_dossiers(seed_text: str, own_text: str) -> str:
     a, b = dossier_sections(seed_text), dossier_sections(own_text)
     title = (re.search(r"^# .+$", seed_text, re.M) or re.search(r"^# .+$", own_text, re.M))
     out = [title.group(0) if title else "# Dossier", ""]
+    done = set()
     for name in list(SECTIONS) + [k for k in list(a) + list(b) if k not in SECTIONS]:
-        if name in out:
+        if name in done:
             continue
+        done.add(name)
         parts = [x for x in (a.get(name, ""), b.get(name, "")) if x]
         if parts:
             out += [f"## {name}", "", "\n\n".join(parts), ""]
@@ -444,6 +447,8 @@ def reverify(slug, key, evidence=None, score=None, today=None) -> dict:
             raise ValueError(f"evidence must be one of {tuple(EVIDENCE)}")
         r["evidence"] = evidence
     if score is not None:
+        if not 1 <= int(score) <= 5:
+            raise ValueError("score is 1 to 5")
         r["score"] = int(score)
     r["seen"] = _today(today).isoformat()
     _save(dom, today)
@@ -456,7 +461,9 @@ EDITABLE = ("name", "url", "verdict", "angle", "evidence", "score", "seen", "tak
 def edit_ref(slug, key, today=None, **changes) -> dict:
     """Correct a reference in place (a moved address, a better take) instead of retiring and re-adding it."""
     dom = _writable(slug, today)
+    was_seed = any(x.get("_layer") == "seed" and (x["id"] == key or norm_url(x["url"]) == norm_url(key)) for x in dom["refs"])
     r = _find_ref(dom, key)
+    old_url = r["url"]
     changes = {k: v for k, v in changes.items() if k in EDITABLE and v not in (None, "")}
     if "verdict" in changes and changes["verdict"] not in VERDICTS:
         raise ValueError(f"verdict must be one of {VERDICTS}")
@@ -479,6 +486,13 @@ def edit_ref(slug, key, today=None, **changes) -> dict:
     if merged["verdict"] == "counter" and not (merged.get("avoid") or "").strip():
         raise ValueError("a counter-example needs an avoid")
     r.update(changes)
+    if was_seed and "url" in changes and norm_url(old_url) != norm_url(changes["url"]):
+        # without this the starter's copy under the old address comes back on the next load
+        dom["refs"].append({"id": r["id"] + "-old", "name": r["name"], "url": old_url, "verdict": r["verdict"],
+                            "angle": r.get("angle", "direct"), "evidence": r.get("evidence", "visited"),
+                            "score": r.get("score", 3), "take": r.get("take", ""), "avoid": r.get("avoid", ""),
+                            "status": "retired", "retired_on": _today(today).isoformat(),
+                            "retired_reason": f"moved to {changes['url']}"})
     _save(dom, today)
     return r
 
@@ -563,10 +577,15 @@ def edit_domain(slug, title=None, summary=None, keywords=None, add_keywords=(), 
         m["title"] = title
     if summary is not None and summary != "":
         m["summary"] = summary
+    seed_meta = sources.loads((dom["seed_path"] / "domain.toml").read_text(encoding="utf-8")) if dom.get("seed_path") else {}
     for k, replace, extra in (("keywords", keywords, add_keywords), ("aliases", aliases, add_aliases)):
         cur = [x.strip().lower() for x in replace if x.strip()] if replace is not None else list(m.get(k, []))
         cur += [x.strip().lower() for x in extra if x.strip() and x.strip().lower() not in cur]
         m[k] = cur
+        if replace is not None and seed_meta:   # a replace on a fork can drop the starter's words too
+            m[f"dropped_{k}"] = [x for x in seed_meta.get(k, []) if x not in cur]
+        elif seed_meta:
+            m[f"dropped_{k}"] = [x for x in m.get(f"dropped_{k}", []) if x not in cur]
     _save(dom, today)
     return load(dom["slug"])
 
@@ -582,6 +601,7 @@ def merge(src, dst, today=None) -> dict:
     for r in s["refs"]:
         if norm_url(r["url"]) not in have:
             r = dict(r)
+            r.pop("_layer", None)   # a starter's reference becomes the destination's own
             if r["id"] in ids:
                 r["id"] = _ref_id(r["name"], ids)
             ids.add(r["id"])
@@ -590,7 +610,7 @@ def merge(src, dst, today=None) -> dict:
         d["meta"][k] = sorted(set(d["meta"].get(k, [])) | set(s["meta"].get(k, [])) | ({s["slug"]} if k == "aliases" else set()))
     for r in s["related"]:
         if r["slug"] not in (d["slug"],) and not any(x["slug"] == r["slug"] for x in d["related"]):
-            d["related"].append(r)
+            d["related"].append({k: v for k, v in r.items() if k != "_layer"})
     d["related"] = [r for r in d["related"] if r["slug"] != s["slug"]]
     body = re.sub(r"^# .*\n", "", s["own_dossier"] if s.get("seed_path") else s["dossier"], count=1).strip()
     body = re.sub(r"^## ", "### ", body, flags=re.M)

@@ -473,7 +473,8 @@ def teardown(argv):
         argv += ["--out", str(domains.path_for_write(dom["slug"]) / "shots")]
     rc = subprocess.call(["node", str(TOOLS / "teardown.mjs"), *argv], cwd=os.getcwd())
     if into:
-        urls = [a for i, a in enumerate(argv) if not a.startswith("--") and (i == 0 or argv[i - 1] not in ("--out", "--frames", "--walk", "--viewports"))]
+        urls = [a if "://" in a else "https://" + a for i, a in enumerate(argv)
+                if not a.startswith("--") and (i == 0 or argv[i - 1] not in ("--out", "--frames", "--walk", "--viewports", "--full-max"))]
         print("\nRecord each one once you have opened the images and judged it:")
         for u in urls:
             print(f'  ddr domain ref add {into} --name "..." --url {u} --verdict exemplar|counter --angle direct|leader|outside \\\n'
@@ -489,10 +490,12 @@ def _exemplar_shots(dom, n):
     for r in refs:
         cands = []
         if r.get("shots"):
-            sp = pathlib.Path(r["shots"])
-            sp = sp if sp.is_absolute() else dom["path"] / sp
-            cands += [sp / "desktop__fold.png", sp] if sp.is_dir() or not sp.suffix else [sp]
-        cands.append(dom["path"] / "shots" / _url_slug(r["url"]) / "desktop__fold.png")
+            sp0 = pathlib.Path(r["shots"])
+            for base in ([dom["path"]] + ([dom["seed_path"]] if dom.get("seed_path") else [])):
+                sp = sp0 if sp0.is_absolute() else base / sp0
+                cands += [sp / "desktop__fold.png", sp] if sp.is_dir() or not sp.suffix else [sp]
+        for base in ([dom["path"]] + ([dom["seed_path"]] if dom.get("seed_path") else [])):
+            cands.append(base / "shots" / _url_slug(r["url"]) / "desktop__fold.png")
         hit = next((c for c in cands if c.is_file()), None)
         if hit:
             found.append((r["name"], hit))

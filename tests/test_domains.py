@@ -494,5 +494,50 @@ class Polish(Base):
         self.assertIn("onboarding", out)
         self.assertNotIn("New territory", out)
 
+
+class ReviewFindings(Base):
+    def seed(self, slug="wellness", refs=('[[ref]]\nid = "loyly"\nname = "Loyly"\nurl = "https://loyly.fi"\nverdict = "exemplar"\n'
+                                           'angle = "direct"\nevidence = "screenshot"\ntake = "t"\nscore = 4\nseen = "2026-11-01"\n'
+                                           'shots = "shots/loyly.fi"\n'),
+             dossier="# W\n\n## Extra notes\n\nSeed extra.\n"):
+        p = self.seeds / slug
+        p.mkdir()
+        (p / "domain.toml").write_text(f'slug = "{slug}"\ntitle = "W"\nkind = "sector"\nkeywords = ["sauna", "spa", "wellness"]\n')
+        (p / "refs.toml").write_text(refs)
+        (p / "dossier.md").write_text(dossier)
+        return p
+
+    def test_editing_a_starter_refs_url_does_not_resurrect_the_old_one(self):
+        self.seed()
+        self.d.edit_ref("wellness", "loyly", url="https://loyly.fi/en")
+        act = self.d.active(self.d.load("wellness"))
+        self.assertEqual([r["url"] for r in act], ["https://loyly.fi/en"])
+        self.assertEqual(len({r["id"] for r in self.d.load("wellness")["refs"]}), len(self.d.load("wellness")["refs"]))
+
+    def test_merging_a_forked_starter_keeps_its_references(self):
+        self.seed()
+        self.d.log("wellness", "note", "forked")
+        self.d.create("spas", "Spas", "sector", keywords=["spa"])
+        self.d.merge("wellness", "spas")
+        self.assertIn("https://loyly.fi", [r["url"] for r in self.d.load("spas")["refs"]])
+
+    def test_custom_section_in_both_layers_appears_once(self):
+        self.seed()
+        p = self.d.path_for_write("wellness")
+        (p / "dossier.md").write_text("# W\n\n## Extra notes\n\nMine.\n")
+        text = self.d.load("wellness")["dossier"]
+        self.assertEqual(text.count("## Extra notes"), 1)
+        self.assertIn("Seed extra.", text); self.assertIn("Mine.", text)
+
+    def test_replacing_keywords_on_a_fork_can_drop_the_starters(self):
+        self.seed()
+        self.d.edit_domain("wellness", keywords=["steam"])
+        self.assertEqual(self.d.load("wellness")["meta"]["keywords"], ["steam"])
+
+    def test_seen_score_is_checked(self):
+        self.seed()
+        with self.assertRaises(ValueError):
+            self.d.reverify("wellness", "loyly", score=9)
+
 if __name__ == "__main__":
     unittest.main()

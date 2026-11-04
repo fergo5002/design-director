@@ -22,8 +22,10 @@ CDX = "https://web.archive.org/cdx/search/cdx"
 
 
 def fetch(url: str, timeout: float = 25.0) -> list[list[str]]:
+    # one capture per month: bounded (at most 12 a year), never truncated at a row limit, and recent
+    # years always included
     q = urllib.parse.urlencode({"url": url, "output": "json", "fl": "timestamp,digest,statuscode",
-                                "collapse": "digest", "filter": "statuscode:200", "limit": "5000"})
+                                "collapse": "timestamp:6", "filter": "statuscode:200"})
     req = urllib.request.Request(f"{CDX}?{q}", headers={"User-Agent": "design-director-history/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         body = r.read().decode("utf-8", "replace").strip()
@@ -36,25 +38,26 @@ def summarise(url: str, rows: list[list[str]]) -> dict:
     for ts, digest, *_ in rows:
         y = ts[:4]
         if y not in years:
-            years[y] = {"first": ts, "versions": 0}
-        years[y]["versions"] += 1
+            years[y] = {"first": ts, "months": 0, "digests": set()}
+        years[y]["months"] += 1
+        years[y]["digests"].add(digest)
     target = url if "://" in url else "https://" + url
     return {
         "url": url,
-        "versions": len(rows),
+        "months": len(rows),
         "first": rows[0][0] if rows else None,
         "last": rows[-1][0] if rows else None,
-        "years": [{"year": y, "versions": v["versions"],
+        "years": [{"year": y, "months": v["months"], "changed_months": len(v["digests"]),
                    "archive": f"https://web.archive.org/web/{v['first']}/{target}"} for y, v in sorted(years.items())],
     }
 
 
 def render(s: dict) -> str:
-    if not s["versions"]:
+    if not s["months"]:
         return f"{s['url']}: no archived captures. Either new, blocked from archiving, or the URL is wrong."
-    L = [f"{s['url']}: {s['versions']} distinct archived versions, {s['first'][:4]} to {s['last'][:4]}"]
+    L = [f"{s['url']}: archived in {s['months']} months, {s['first'][:4]} to {s['last'][:4]} (one capture a month)"]
     for y in s["years"]:
-        L.append(f"  {y['year']}  {y['versions']:>4} versions   {y['archive']}")
+        L.append(f"  {y['year']}  {y['months']:>2} months, {y['changed_months']:>2} with different content   {y['archive']}")
     L.append("Tear down two or three of these beside today's site (`ddr teardown <link>`) to see whether its\n"
              "signature move is new or worn. Archived pages often lose fonts and scripts: judge layout and copy.")
     return "\n".join(L)
