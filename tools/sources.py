@@ -407,6 +407,11 @@ def main(argv=None):
             print(json.dumps([{k: v for k, v in e.items() if not k.startswith("_")} for e in hits], indent=1))
         else:
             _print(hits, args.verbose)
+            if not hits:
+                print(f"No catalogue entry matches {args.query!r}. The catalogue holds tools, galleries and libraries, "
+                      "not sector examples: search for the kind of source you need (\"product ui\", \"booking\", "
+                      "\"editorial type\"), and find category references with web search or a research MCP (`ddr mcp --research`).",
+                      file=sys.stderr)
         return 0 if hits else 1
     if args.cmd == "shuffle":
         _print(shuffle(entries, args.n, args.seed, args.kind or None), True)

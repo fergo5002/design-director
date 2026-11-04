@@ -340,5 +340,62 @@ class Cli(Base):
         self.assertIn("mercury.com", out)
 
 
+
+class Feedback(Base):
+    """Fixes for friction the first research agents hit."""
+
+    def test_slug_keeps_accented_letters_as_plain_ones(self):
+        self.assertEqual(self.d.slugify("Snøhetta Norges Bank"), "snohetta-norges-bank")
+        self.assertEqual(self.d.slugify("Café Été"), "cafe-ete")
+
+    def test_ref_edit_changes_fields_and_keeps_validation(self):
+        self.fintech()
+        r = self.ref()
+        self.d.edit_ref("fintech", r["id"], url="https://mercury.com/business", take="Better take", score=4)
+        got = self.d.load("fintech")["refs"][0]
+        self.assertEqual((got["url"], got["take"], got["score"]), ("https://mercury.com/business", "Better take", 4))
+        self.ref(name="Other", url="https://other.example")
+        with self.assertRaises(ValueError):
+            self.d.edit_ref("fintech", r["id"], url="https://www.other.example/")
+        with self.assertRaises(ValueError):
+            self.d.edit_ref("fintech", r["id"], verdict="great")
+        rc, out = self.cli("ref", "edit", "fintech", r["id"], "--notes", "Seen at 1440 and 390")
+        self.assertEqual(rc, 0, out)
+
+    def test_brief_separates_take_from_leave(self):
+        self.fintech()
+        self.ref(take="Calm ledger type", avoid="Cookie wall")
+        self.assertIn("Calm ledger type. Leave: Cookie wall", self.d.brief(self.d.load("fintech")))
+
+    def test_walked_flows_raise_the_ceiling_above_the_high_target(self):
+        self.fintech()
+        for i in range(10):
+            self.ref(name=f"R{i}", url=f"https://r{i}.example", angle=["direct", "leader", "outside"][i % 3],
+                     evidence="flow" if i < 3 else "screenshot")
+        for i in range(4):
+            self.ref(name=f"C{i}", url=f"https://c{i}.example", verdict="counter", take="", avoid="generic")
+        self.write_dossier("fintech")
+        c = self.d.confidence(self.d.load("fintech"), today=TODAY)
+        self.assertGreater(c["parts"]["depth"], 0)
+        self.assertGreater(c["score"], 70)
+
+    def test_online_audit_tells_blocked_from_dead_and_sees_path_moves(self):
+        self.fintech()
+        self.ref(name="Walled", url="https://walled.example")
+        self.ref(name="Gone", url="https://gone.example/page")
+        self.ref(name="Moved", url="https://moved.example/us/en")
+        answers = {"https://walled.example": (403, "https://walled.example"),
+                   "https://gone.example/page": (404, "https://gone.example/page"),
+                   "https://moved.example/us/en": (200, "https://moved.example/eu/en/")}
+        orig = self.d._check_url
+        self.d._check_url = lambda u, timeout=8.0: answers[u]
+        try:
+            found = {f["ref"]: f["kind"] for f in self.d.audit(self.d.load("fintech"), today=TODAY, online=True)}
+        finally:
+            self.d._check_url = orig
+        self.assertEqual(found["walled"], "blocked")
+        self.assertEqual(found["gone"], "dead")
+        self.assertEqual(found["moved"], "moved")
+
 if __name__ == "__main__":
     unittest.main()

@@ -33,6 +33,7 @@ ship in this repo's domains/ folder; the first write to one forks it into your h
     ddr domain ref add wellness --name "..." --url ... --verdict exemplar --angle direct \\
         --evidence screenshot --take "..." --score 4
     ddr domain ref retire wellness <id> --reason "redesigned into a template"
+    ddr domain ref edit wellness <id> --url https://... --take "..."   # correct in place
     ddr domain status wellness          # the score, its parts, and what would raise it
     ddr domain plan wellness --stakes high
     ddr domain log wellness shipped "Booking page v2"
@@ -100,7 +101,10 @@ def home_domains() -> pathlib.Path:
 
 
 def slugify(s: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-")
+    import unicodedata
+    s = unicodedata.normalize("NFKD", (s or "").replace("ø", "o").replace("Ø", "O").replace("ß", "ss"))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
     if not s:
         raise ValueError("a domain needs a name")
     return s
@@ -383,6 +387,39 @@ def reverify(slug, key, evidence=None, score=None, today=None) -> dict:
     return r
 
 
+EDITABLE = ("name", "url", "verdict", "angle", "evidence", "score", "seen", "take", "avoid", "tags", "shots", "notes")
+
+
+def edit_ref(slug, key, today=None, **changes) -> dict:
+    """Correct a reference in place (a moved address, a better take) instead of retiring and re-adding it."""
+    dom = _writable(slug, today)
+    r = _find_ref(dom, key)
+    changes = {k: v for k, v in changes.items() if k in EDITABLE and v not in (None, "")}
+    if "verdict" in changes and changes["verdict"] not in VERDICTS:
+        raise ValueError(f"verdict must be one of {VERDICTS}")
+    if "angle" in changes and changes["angle"] not in ANGLES:
+        raise ValueError(f"angle must be one of {ANGLES}")
+    if "evidence" in changes and changes["evidence"] not in EVIDENCE:
+        raise ValueError(f"evidence must be one of {tuple(EVIDENCE)}")
+    if "score" in changes:
+        changes["score"] = int(changes["score"])
+        if not 1 <= changes["score"] <= 5:
+            raise ValueError("score is 1 to 5")
+    if "url" in changes:
+        key2 = norm_url(changes["url"])
+        clash = [x for x in dom["refs"] if x is not r and norm_url(x["url"]) == key2]
+        if clash:
+            raise ValueError(f"{changes['url']} is already in {dom['slug']} as {clash[0]['id']}")
+    merged = dict(r, **changes)
+    if merged["verdict"] == "exemplar" and not (merged.get("take") or "").strip():
+        raise ValueError("an exemplar needs a take")
+    if merged["verdict"] == "counter" and not (merged.get("avoid") or "").strip():
+        raise ValueError("a counter-example needs an avoid")
+    r.update(changes)
+    _save(dom, today)
+    return r
+
+
 def active(dom) -> list[dict]:
     return [r for r in dom["refs"] if r.get("status", "active") == "active"]
 
@@ -527,6 +564,7 @@ def confidence(dom: dict, today=None) -> dict:
         "counters": round(8 * min(co, 4) / 4, 1),
         "breadth": 4 * sum(1 for a in ANGLES if angle_w[a] >= 0.5),
         "dossier": round(dossier_pts, 1),
+        "depth": round(2 * min(sum(_decay(r.get("seen"), today) for r in hands_on if r.get("evidence") == "flow"), 4), 1),
         "shipped": round(6 * min(shipped, 2), 1),
         "wins": round(3 * min(wins, 3), 1),
         "lessons": round(3 * min(lessons, 3), 1),
@@ -562,6 +600,9 @@ def confidence(dom: dict, today=None) -> dict:
         gaps.append(f"visit {len(weak)} references known only from search results")
     for e in open_misses[:3]:
         gaps.append(f"turn the rejection '{e['what']}' into a rule (`ddr domain log ... miss --rule`) so it cannot recur")
+    flows = sum(1 for r in hands_on if r.get("evidence") == "flow")
+    if flows < 4:
+        gaps.append(f"walk the real journey on the best references (book, sign up, apply) as far as it goes without submitting ({flows} walked so far, `ddr teardown <url> --walk`)")
     if shipped == 0:
         gaps.append("nothing has shipped in this domain yet; experience comes from shipping and being judged")
     return {"score": score, "band": band, "parts": parts, "cap": cap, "gaps": gaps,
@@ -671,10 +712,13 @@ def audit(dom: dict, today=None, online: bool = False) -> list[dict]:
     if online:
         for r in refs:
             status, final = _check_url(r["url"])
-            if not isinstance(status, int) or status >= 400:
+            if status in (401, 403, 429, 503) or status == 202:
+                add("blocked", f"{r['name']} answered {status} to a plain request", "a bot wall, not proof it is dead: check it in the renderer (`ddr teardown`)", r["id"])
+            elif not isinstance(status, int) or status >= 400:
                 add("dead", f"{r['name']} returned {status}", "retire it, or find where it moved", r["id"])
-            elif _host(final) != _host(r["url"]):
-                add("moved", f"{r['name']} now redirects to {_host(final)}", "look at it again: a moved site has often been redesigned", r["id"])
+            elif norm_url(final) != norm_url(r["url"]):
+                where = _host(final) if _host(final) != _host(r["url"]) else norm_url(final)
+                add("moved", f"{r['name']} now redirects to {where}", "look at it again (a moved page has often been redesigned), then `ddr domain ref edit` the url", r["id"])
     return found
 
 
@@ -719,7 +763,8 @@ def brief(dom: dict, today=None, n_refs: int = 8) -> str:
                 key=lambda r: -(int(r.get("score", 3)) * EVIDENCE.get(r.get("evidence"), 0.25) * _decay(r.get("seen"), today)))
     if ex:
         L += ["", "## Exemplars"]
-        L += [f"- {r['name']} ({r['url']}, {r.get('angle')}, {r.get('evidence')} {r.get('seen')}, {r.get('score')}/5): {r.get('take')}"
+        stop = lambda t: (t or "").rstrip() + ("" if (t or "").rstrip().endswith((".", "!", "?")) else ".")  # noqa: E731
+        L += [f"- {r['name']} ({r['url']}, {r.get('angle')}, {r.get('evidence')} {r.get('seen')}, {r.get('score')}/5): {stop(r.get('take'))}"
               + (f" Leave: {r['avoid']}" if r.get("avoid") else "") for r in ex[:n_refs]]
     co = [r for r in refs if r.get("verdict") == "counter"]
     if co:
@@ -793,7 +838,22 @@ def main(argv=None):
     ra.add_argument("--evidence", required=True, choices=tuple(EVIDENCE)); ra.add_argument("--take", default="")
     ra.add_argument("--avoid", default=""); ra.add_argument("--score", type=int, default=3)
     ra.add_argument("--seen"); ra.add_argument("--tags", default=""); ra.add_argument("--shots", default="")
-    ra.add_argument("--notes", default=""); ra.add_argument("--force", default="")
+    ra.add_argument("--notes", default=""); ra.add_argument("--force", default="", metavar="REASON",
+                    help="re-add a retired reference, saying why it deserves to come back")
+    for act in ra._actions:
+        act.help = act.help or {"--name": "what it is, as a person would name it", "--url": "the page you actually looked at",
+                                "--verdict": "exemplar (take something) or counter (avoid something)",
+                                "--angle": "direct (this category), leader (best in an adjacent one), outside (another discipline)",
+                                "--evidence": "how you saw it: search < visited < screenshot < flow",
+                                "--take": "the specific move worth taking, with values", "--avoid": "exactly what to leave behind",
+                                "--score": "1 to 5; an exemplar you would score 2 is not an exemplar",
+                                "--seen": "date seen, default today", "--tags": "axis:value tags, comma separated",
+                                "--shots": "folder of its screenshots, relative to the domain", "--notes": "anything else worth knowing"
+                                }.get(act.option_strings[0] if act.option_strings else "", None)
+    re_ = rs.add_parser("edit", help="correct a reference in place"); re_.add_argument("slug"); re_.add_argument("key")
+    for f in ("name", "url", "verdict", "angle", "evidence", "take", "avoid", "seen", "tags", "shots", "notes"):
+        re_.add_argument(f"--{f}")
+    re_.add_argument("--score", type=int)
     rr = rs.add_parser("retire"); rr.add_argument("slug"); rr.add_argument("key"); rr.add_argument("--reason", required=True)
     rv = rs.add_parser("seen"); rv.add_argument("slug"); rv.add_argument("key")
     rv.add_argument("--evidence", choices=tuple(EVIDENCE)); rv.add_argument("--score", type=int)
@@ -896,6 +956,11 @@ def main(argv=None):
                 return 0
             if a.rcmd == "retire":
                 ref = retire_ref(a.slug, a.key, a.reason); print(f"retired {ref['id']}: {ref['retired_reason']}"); return 0
+            if a.rcmd == "edit":
+                ch = {k: getattr(a, k) for k in EDITABLE}
+                if ch.get("tags"):
+                    ch["tags"] = _csv(ch["tags"])
+                ref = edit_ref(a.slug, a.key, **ch); print(f"edited {ref['id']}"); return 0
             if a.rcmd == "seen":
                 ref = reverify(a.slug, a.key, a.evidence, a.score); print(f"{ref['id']} seen {ref['seen']} ({ref['evidence']})"); return 0
             if a.rcmd == "list":
