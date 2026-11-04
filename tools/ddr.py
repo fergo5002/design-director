@@ -1,16 +1,22 @@
 """ddr: one entry point for the design-director toolkit.
 
     python tools/ddr.py install --agent all        # link the skills into Claude Code, Codex, Cursor, Gemini
-    python tools/ddr.py doctor                     # what is installed, what is missing, what is stale
+    python tools/ddr.py doctor                     # what is installed, what is missing, what competes with it
+    python tools/ddr.py uninstall                  # remove exactly what install added (keeps your domains)
     python tools/ddr.py init                       # scaffold .design/ in the current project
     python tools/ddr.py mcp                        # recommended MCP servers with per-agent setup
     python tools/ddr.py mcp --tier core --agent claude --apply
     python tools/ddr.py sources search "editorial type pairings"
     python tools/ddr.py taste brief
+    python tools/ddr.py domain match "a booking site for a sauna"   # where you stand, and how sure
     python tools/ddr.py lint src/
     python tools/ddr.py shots https://localhost:3000 --full
+    python tools/ddr.py teardown https://example.com --into independent-stays   # capture and measure a reference
+    python tools/ddr.py sheet --domain independent-stays --with my-fold.png      # yours beside the best, same size
     python tools/ddr.py palette ramp --hue 168 --chroma 0.02:0.05 --light 0.25:0.95 --steps 9
     python tools/ddr.py fonts --css "https://api.fontshare.com/v2/css?f[]=switzer@400,600" --family Switzer --out switzer.css
+    python tools/ddr.py history https://example.com    # how old the design is, from the Wayback Machine
+    python tools/ddr.py mcp --research                  # the servers that find, look at and measure references
     python tools/ddr.py radar
 
 Standard library only (Python 3.9+). `shots` needs Node and `npm install` in this repo.
@@ -19,6 +25,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -94,6 +101,103 @@ def _shim() -> str:
     return f"[shim]  {target}" + ("" if on_path else f"  (add {target.parent} to your PATH)")
 
 
+BLOCK_BEGIN = "<!-- design-director:begin (added by `ddr install`; `ddr uninstall` removes it) -->"
+BLOCK_END = "<!-- design-director:end -->"
+ROUTING = """## Design work
+
+For any design work (a page, component, flow, dashboard, brand, deck, motion, imagery, or a
+review of any of these), load the **design-director** skill before writing markup, choosing a
+colour or picking a font, and follow it through to its gate. It starts with
+`ddr domain match "<the brief>"`: say the confidence it reports in one line, and when it is
+below what the job needs, research the domain first with the design-research skill, without
+waiting to be asked. Project-specific design rules and the user's direct instructions outrank
+the skill. Generic design defaults anywhere else in this file do not."""
+INSTRUCTION_FILES = {"claude": HOME / ".claude" / "CLAUDE.md", "codex": HOME / ".codex" / "AGENTS.md"}
+# A competing skill claims interface or web design work; merely mentioning design-director does not count.
+DESIGN_SKILL = re.compile(r"\b(ui|ux|user interfaces?|interfaces?|web ?sites?|web pages?|landing pages?|front-?end|"
+                          r"design systems?|typography|tailwind|shadcn|css|styling)\b", re.I)
+# A competing rule sets a design default: a named face or framework, a colour, a look.
+DESIGN_RULE = re.compile(r"\b(inter|roboto|poppins|montserrat|open sans|lato|helvetica|arial|space grotesk|dm sans|"
+                         r"playfair|geist|shadcn|tailwind|bootstrap|material ui|mui|chakra|daisyui|glassmorphism|"
+                         r"gradients?|dark mode|dark theme|rounded-\w+|drop shadows?|font-family|fonts?|typefaces?|"
+                         r"palettes?|brand colou?rs?|accent colou?rs?)\b|#[0-9a-f]{6}\b|#[0-9a-f]{3}\b", re.I)
+
+
+def _domain_home() -> pathlib.Path:
+    env = os.environ.get("DDR_HOME")
+    return pathlib.Path(env).expanduser() if env else HOME / ".design-director"
+
+
+def _strip_block(text: str) -> str:
+    pat = re.compile(re.escape(BLOCK_BEGIN) + r".*?" + re.escape(BLOCK_END) + r"\n?", re.S)
+    return pat.sub("", text)
+
+
+def _route(agent: str, remove: bool = False) -> str:
+    target = INSTRUCTION_FILES.get(agent)
+    if target is None:
+        return ""
+    old = target.read_text(encoding="utf-8") if target.exists() else ""
+    base = _strip_block(old)
+    if remove:
+        if base != old:
+            target.write_text(base.rstrip() + "\n" if base.strip() else "", encoding="utf-8")
+            return f"[{agent}] removed the routing block from {target}"
+        return ""
+    block = f"{BLOCK_BEGIN}\n{ROUTING}\n{BLOCK_END}\n"
+    if BLOCK_BEGIN in old and BLOCK_END in old:   # refresh in place, wherever the user moved it
+        pat = re.compile(re.escape(BLOCK_BEGIN) + r".*?" + re.escape(BLOCK_END) + r"\n?", re.S)
+        new = pat.sub(lambda _m: block, old, count=1)
+    else:
+        new = base.rstrip() + ("\n\n" if base.strip() else "") + block
+    if new == old:
+        return f"[{agent}] routing block already current in {target}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(new, encoding="utf-8")
+    return f"[{agent}] {'refreshed' if BLOCK_BEGIN in old else 'added'} the routing block in {target}"
+
+
+def _ours(dst: pathlib.Path, src: pathlib.Path) -> bool:
+    return (dst.is_symlink() and dst.resolve() == src.resolve()) or _ours_copy(dst)
+
+
+def _description(skill_md: pathlib.Path) -> str:
+    try:
+        text = skill_md.read_text(encoding="utf-8", errors="ignore")[:4000]
+    except OSError:
+        return ""
+    m = re.search(r"^description:\s*(.+)$", text, re.M)
+    return m.group(1).strip() if m else ""
+
+
+def conflicts() -> dict:
+    """Other skills and instruction lines that also claim design work, which is the usual
+    reason an agent ignores design-director: something else told it what to do first."""
+    ours = {(ROOT / "skills" / s).resolve() for s in SKILLS}
+    skills = []
+    for agent, base in agent_dirs().items():
+        if not base.is_dir():
+            continue
+        for d in sorted(base.iterdir()):
+            if not (d / "SKILL.md").exists():
+                continue
+            if d.resolve() in ours or _ours_copy(d):
+                continue
+            desc = _description(d / "SKILL.md")
+            claim = re.sub(r"design-director", "", desc, flags=re.I)
+            if DESIGN_SKILL.search(d.name.replace("-", " ")) or DESIGN_SKILL.search(claim):
+                skills.append({"agent": agent, "name": d.name, "path": str(d), "description": desc[:120]})
+    rules = []
+    for agent, f in INSTRUCTION_FILES.items():
+        if not f.exists():
+            continue
+        text = _strip_block(f.read_text(encoding="utf-8", errors="ignore"))
+        for n, line in enumerate(text.splitlines(), 1):
+            if DESIGN_RULE.search(line) and len(line.strip()) > 3:
+                rules.append({"agent": agent, "file": str(f), "line_no": n, "line": line.strip()[:140]})
+    return {"skills": skills, "rules": rules}
+
+
 def install(argv):
     import argparse
     p = argparse.ArgumentParser(prog="ddr install")
@@ -102,6 +206,8 @@ def install(argv):
     p.add_argument("--project", help="install into a project instead of your home folder")
     p.add_argument("--copy", action="store_true", help="copy instead of symlink (symlinks update with git pull)")
     p.add_argument("--prefix", default="", help="install skills as <prefix><name> to avoid clashing with your own")
+    p.add_argument("--no-routing", action="store_true",
+                   help="do not add the short routing block to ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md")
     a = p.parse_args(argv)
     proj = pathlib.Path(a.project).resolve() if a.project else None
     if a.agent == "all":
@@ -117,6 +223,12 @@ def install(argv):
             base = (proj / f".{agent}" / "skills") if proj else agent_dirs()[agent]
             for s in SKILLS:
                 print(f"[{agent}] " + _link(ROOT / "skills" / s, base / f"{a.prefix}{s}", a.copy))
+            lead = base / f"{a.prefix}design-director"
+            if proj is None and not a.no_routing and agent in INSTRUCTION_FILES:
+                if _ours(lead, ROOT / "skills" / "design-director"):
+                    print(_route(agent))
+                else:
+                    print(f"[{agent}] routing block not added: {lead} is not this repo's skill")
         elif agent == "cursor":
             target = proj / ".cursor" / "rules" / "design-director.mdc"
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -137,9 +249,40 @@ def install(argv):
         else:
             print(f"unknown agent {agent}")
     print(_shim())
+    dh = _domain_home() / "domains"
+    dh.mkdir(parents=True, exist_ok=True)
+    print(f"[domains] your design expertise accumulates in {dh} (set DDR_HOME to move it)")
+    found = conflicts()
+    if found["skills"] or found["rules"]:
+        print(f"\nHeads up: {len(found['skills'])} other design skills and {len(found['rules'])} design lines in your "
+              "instructions may compete with design-director. `ddr doctor` lists them.")
     print("\nClaude Code users can instead install it as a plugin:\n"
           "  /plugin marketplace add fergo5002/design-director\n  /plugin install design-director@design-director")
     print(f"\nNext: python {TOOLS / 'ddr.py'} doctor")
+    return 0
+
+
+def uninstall(argv):
+    """Remove exactly what install made: our skill links or copies, the routing blocks and the shim.
+    Your domains, taste ledger and anything else in DDR_HOME are kept."""
+    import argparse
+    p = argparse.ArgumentParser(prog="ddr uninstall")
+    p.add_argument("--prefix", default="")
+    a = p.parse_args(argv)
+    for agent, base in agent_dirs().items():
+        for s in SKILLS:
+            d = base / f"{a.prefix}{s}"
+            if d.is_symlink() and d.resolve() == (ROOT / "skills" / s).resolve():
+                d.unlink(); print(f"[{agent}] unlinked {d}")
+            elif _ours_copy(d):
+                shutil.rmtree(d); print(f"[{agent}] removed copy {d}")
+        msg = _route(agent, remove=True)
+        if msg:
+            print(msg)
+    shim = HOME / ("AppData/Local/Microsoft/WindowsApps/ddr.cmd" if os.name == "nt" else ".local/bin/ddr")
+    if shim.exists() and not shim.is_symlink() and "ddr-shim: design-director" in shim.read_text(errors="ignore"):
+        shim.unlink(); print(f"[shim]  removed {shim}")
+    print(f"kept your domains and taste in {_domain_home()}")
     return 0
 
 
@@ -184,6 +327,30 @@ def doctor(argv):
             d = base / s
             state.append(f"{s}:{'linked' if d.is_symlink() and d.resolve() == (ROOT / 'skills' / s).resolve() else ('OTHER' if d.exists() else '-')}")
         print(f"  {agent:12} {' '.join(state)}")
+        if "design-director:OTHER" in state:
+            print(f"  {'':12} a different design-director is installed there, so this repo's version is not the one "
+                  f"your agent loads. Keep it, or install alongside with --prefix.")
+    for agent, f in INSTRUCTION_FILES.items():
+        has = f.exists() and BLOCK_BEGIN in f.read_text(encoding="utf-8", errors="ignore")
+        print(f"  routing      {agent}: {'present in ' + str(f) if has else 'MISSING (run ddr install), so the agent may never reach for the skill'}")
+    try:
+        import domains
+        doms = domains.all_domains()
+        print(f"  domains      {len(doms)} at {domains.home_domains()} (plus the repo's starters)")
+        for d in doms:
+            c = domains.confidence(d)
+            print(f"               {d['slug']:22} {c['score']:>3}/100 {c['band']}")
+    except Exception as e:  # never let a bad domain file break doctor
+        print(f"  domains      could not read ({e})")
+    found = conflicts()
+    for c in found["skills"]:
+        print(f"  competing    [{c['agent']}] skill {c['name']}: {c['description']}")
+    for r in found["rules"][:12]:
+        print(f"  your rule    {r['file']}:{r['line_no']}: {r['line']}")
+    if found["skills"] or found["rules"]:
+        print("               Specific rules for a project should win. Generic defaults (\"use Inter\", \"use shadcn defaults\",\n"
+              "               a fixed palette for everything) make every design look the same: edit or delete them.\n"
+              "               Other design skills are fine to keep; the routing block tells your agent design-director leads.")
     entries = sources.load()
     errs = sources.validate(entries, sources.categories())
     ok &= not errs
@@ -230,6 +397,7 @@ def mcp(argv):
     p.add_argument("--tier", choices=["core", "recommended", "optional", "all"], default="all")
     p.add_argument("--agent", choices=["claude", "codex", "cursor"], default="claude")
     p.add_argument("--apply", action="store_true", help="claude only: run the setup commands for one --tier")
+    p.add_argument("--research", action="store_true", help="only the servers that find, look at and measure references")
     a = p.parse_args(argv)
     if a.apply and (a.agent != "claude" or a.tier == "all"):
         print("--apply needs --agent claude and an explicit --tier (core, recommended or optional)", file=sys.stderr)
@@ -239,6 +407,8 @@ def mcp(argv):
     rc, skipped = 0, []
     for s in sorted(data.get("server", []), key=lambda s: (order.index(s["tier"]), s["id"])):
         if a.tier != "all" and s["tier"] != a.tier:
+            continue
+        if a.research and not s.get("research"):
             continue
         print(f"\n[{s['tier']}] {s['name']}: {s['why']}")
         if s.get("needs"):
@@ -265,6 +435,92 @@ def mcp(argv):
     return rc
 
 
+def _pop(argv, name, default=None, valued=True):
+    """Remove --name [value] from argv and return the value."""
+    if name not in argv:
+        return default
+    i = argv.index(name)
+    if not valued:
+        del argv[i]
+        return True
+    val = argv[i + 1] if i + 1 < len(argv) else default
+    del argv[i:i + 2]
+    return val
+
+
+def _url_slug(u: str) -> str:
+    from urllib.parse import urlparse
+    x = urlparse(u if "://" in u else "https://" + u)
+    tail = re.sub(r"\W+", "-", x.path).rstrip("-")
+    return re.sub(r"^www\.", "", (x.hostname or "").lower()) + tail
+
+
+def teardown(argv):
+    """ddr teardown <url...> [--into <domain>] [--frames 6] [--walk "A>B"]: capture and measure references."""
+    argv = list(argv)
+    if not _which("node"):
+        print("teardown needs Node.js 18+ and `npm install` in the design-director repo"); return 2
+    into = _pop(argv, "--into")
+    if into:
+        import domains
+        dom = domains.load(into)
+        if dom is None:
+            print(f"no domain {into!r}: `ddr domain new {into} --kind sector|pattern` first"); return 2
+        argv += ["--out", str(domains.path_for_write(dom["slug"]) / "shots")]
+    rc = subprocess.call(["node", str(TOOLS / "teardown.mjs"), *argv], cwd=os.getcwd())
+    if into:
+        urls = [a for i, a in enumerate(argv) if not a.startswith("--") and (i == 0 or argv[i - 1] not in ("--out", "--frames", "--walk", "--viewports"))]
+        print("\nRecord each one once you have opened the images and judged it:")
+        for u in urls:
+            print(f'  ddr domain ref add {into} --name "..." --url {u} --verdict exemplar|counter --angle direct|leader|outside \\\n'
+                  f'      --evidence screenshot --shots shots/{_url_slug(u)} --score N --take "<the move, with the measured values>"')
+    return rc
+
+
+def _exemplar_shots(dom, n):
+    import domains
+    refs = sorted((r for r in domains.active(dom) if r.get("verdict") == "exemplar"),
+                  key=lambda r: -int(r.get("score", 3)))
+    found = []
+    for r in refs:
+        cands = []
+        if r.get("shots"):
+            sp = pathlib.Path(r["shots"])
+            sp = sp if sp.is_absolute() else dom["path"] / sp
+            cands += [sp / "desktop__fold.png", sp] if sp.is_dir() or not sp.suffix else [sp]
+        cands.append(dom["path"] / "shots" / _url_slug(r["url"]) / "desktop__fold.png")
+        hit = next((c for c in cands if c.is_file()), None)
+        if hit:
+            found.append((r["name"], hit))
+        if len(found) >= n:
+            break
+    return found
+
+
+def sheet(argv):
+    """ddr sheet <png...> [--labels] or ddr sheet --domain <slug> [--with yours.png] [--n 3]."""
+    argv = list(argv)
+    if not _which("node"):
+        print("sheet needs Node.js 18+ and `npm install` in the design-director repo"); return 2
+    slug = _pop(argv, "--domain")
+    if slug:
+        import domains
+        dom = domains.load(slug)
+        if dom is None:
+            print(f"no domain {slug!r}"); return 2
+        mine = _pop(argv, "--with")
+        n = int(_pop(argv, "--n", "3"))
+        shots = _exemplar_shots(dom, n)
+        if not shots:
+            print(f"no exemplar in {slug} has screenshots yet: `ddr teardown <url> --into {slug}` first"); return 2
+        files = ([mine] if mine else []) + [str(f) for _, f in shots]
+        labels = (["Yours"] if mine else []) + [name for name, _ in shots]
+        if "--out" not in argv:
+            argv += ["--out", str(pathlib.Path.cwd() / f"sheet-{dom['slug']}.png")]
+        argv = files + ["--labels", ",".join(l.replace(",", " ") for l in labels)] + argv
+    return subprocess.call(["node", str(TOOLS / "sheet.mjs"), *argv], cwd=os.getcwd())
+
+
 def _run_py(module, argv):
     mod = __import__(module)
     return mod.main(argv)
@@ -280,6 +536,8 @@ def main(argv=None):
         return install(rest)
     if cmd == "init":
         return init(rest)
+    if cmd == "uninstall":
+        return uninstall(rest)
     if cmd == "doctor":
         return doctor(rest)
     if cmd == "mcp":
@@ -288,13 +546,21 @@ def main(argv=None):
         return _run_py("sources", rest)
     if cmd == "taste":
         return _run_py("taste", rest)
+    if cmd in ("domain", "domains"):
+        return _run_py("domains", rest)
     if cmd == "lint":
         return _run_py("slop_lint", rest)
     if cmd == "radar":
         return _run_py("radar", rest)
+    if cmd == "history":
+        return _run_py("history", rest)
     if cmd in ("palette", "fonts", "routes"):
         script = {"palette": "palette.py", "fonts": "inline_fonts.py", "routes": "check_routes.py"}[cmd]
         return subprocess.call([sys.executable, str(TOOLS / script), *rest])
+    if cmd == "teardown":
+        return teardown(rest)
+    if cmd == "sheet":
+        return sheet(rest)
     if cmd == "shots":
         if not _which("node"):
             print("shots needs Node.js 18+"); return 2

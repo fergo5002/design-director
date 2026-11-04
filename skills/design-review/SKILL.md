@@ -56,12 +56,16 @@ evidence for each score:
 | Type | Is the face chosen for this brief, with leading and tracking tuned by size? |
 | Colour | Does every colour trace to the subject's world, and is contrast measured? |
 | Craft | Spacing rhythm, alignment, states (hover, focus, empty, error, loading), motion that lands on a finished state. |
-| Distinctiveness | Name three decisions here a model would not have made by default. Fewer than three scores 2 at most. |
+| Distinctiveness | Name three decisions here a model would not have made by default. Fewer than three scores 2 at most. Run the five tests in SLOP.md; two failures score 1. |
 | Truth | Copy and data verified (section 1). |
 | Load | Words and screens per page. More than one text-only section in a row reads as a wall. |
 
 Anything under 3 is a defect to fix, not a note. Run CHECKLIST.md from
 design-director for the full gate.
+
+Then put the screenshots beside the two best exemplars in the domain
+(`ddr domain brief <slug>` lists them) at the same size. If the work is plainly weaker
+than the category's best, say so in the report, whatever the scores above say.
 
 ## 5. Unanchored second opinion
 
@@ -78,5 +82,8 @@ Report: what passed, what failed with evidence, what you fixed, and what you did
 ```bash
 python tools/ddr.py taste error "<what went wrong in the process>" --why "<cause>" --rung observed --prevention "<rule>"
 python tools/ddr.py taste miss "<rejected design move>" --why "<reason>" --tags <axis:value> --rule "<rule you edited>"
-python tools/ddr.py taste shipped --what "<thing>" --tags <axis:value,...>
+python tools/ddr.py taste shipped --what "<thing>" --tags <axis:value,...> --domain <slug>
 ```
+
+If the review showed that a reference in the domain led you somewhere bad, retire it
+with the reason (`ddr domain ref retire <slug> <id> --reason "..."`).

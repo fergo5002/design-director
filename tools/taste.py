@@ -1,7 +1,8 @@
 """The taste ledger: what landed, what was rejected, what went wrong, and what keeps getting made.
 
 One JSON line per event in .design/taste.jsonl (the project's own taste), or the file
-named by $DD_TASTE, or ~/.design-director/taste.jsonl with --global.
+named by $DD_TASTE, or $DDR_HOME/taste.jsonl (default ~/.design-director) with --global.
+Add --domain <slug> to an event and it also counts towards that domain's experience.
 
     ddr taste win    "Masked text rise, 90ms stagger" --tags motion:masked-rise,type:serif-display \
                     --values "Instrument Serif 96/0.95, -0.02em" --surface landing
@@ -44,7 +45,8 @@ def default_path(global_: bool = False) -> pathlib.Path:
     if os.environ.get("DD_TASTE"):
         return pathlib.Path(os.environ["DD_TASTE"]).expanduser()
     if global_:
-        return pathlib.Path.home() / ".design-director" / "taste.jsonl"
+        base = os.environ.get("DDR_HOME")
+        return (pathlib.Path(base).expanduser() if base else pathlib.Path.home() / ".design-director") / "taste.jsonl"
     return pathlib.Path.cwd() / ".design" / "taste.jsonl"
 
 
@@ -213,6 +215,7 @@ def main(argv=None):
         s.add_argument("--surface"); s.add_argument("--project"); s.add_argument("--values")
         s.add_argument("--why"); s.add_argument("--rule"); s.add_argument("--by")
         s.add_argument("--rung"); s.add_argument("--prevention"); s.add_argument("--evidence")
+        s.add_argument("--domain", help="also record it in this design domain's ledger (ddr domain list)")
     b = sub.add_parser("brief", parents=[common]); b.add_argument("--surface"); b.add_argument("--no-draw", action="store_true")
     b.add_argument("--seed", type=int)
     sub.add_parser("saturation", parents=[common])
@@ -225,6 +228,13 @@ def main(argv=None):
         print(path); return 0
     if a.cmd in KINDS:
         what = a.what or a.what_opt
+        dom = None
+        if a.domain:
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+            import domains
+            dom = domains.load(a.domain)
+            if dom is None:
+                print(f"not logged: no domain {a.domain!r} (`ddr domain list`)", file=sys.stderr); return 2
         try:
             ev = append(path, a.cmd, what, [t for t in a.tags.split(",") if t],
                         surface=a.surface, project=a.project, values=a.values, why=a.why, rule=a.rule,
@@ -232,6 +242,13 @@ def main(argv=None):
         except ValueError as e:
             print(f"not logged: {e}", file=sys.stderr); return 2
         print(f"logged {ev['kind']} to {path}")
+        if dom is not None:
+            try:
+                domains.log(dom["slug"], a.cmd, what, why=a.why or "", rule=a.rule or "",
+                            prevention=a.prevention or "", tags=ev.get("tags", []), project=a.project or "")
+                print(f"and to the {dom['slug']} domain")
+            except ValueError as e:
+                print(f"not logged to the domain: {e}", file=sys.stderr); return 2
         if a.cmd == "miss" and not a.rule:
             print("now edit the rule that allowed it, then re-log with --rule so the ledger points at the fix")
         return 0

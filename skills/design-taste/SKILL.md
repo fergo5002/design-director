@@ -32,8 +32,12 @@ python tools/ddr.py taste error "Screenshot timed out, page blamed" --why "hidde
 ```
 
 Ledger location: `.design/taste.jsonl` in the project by default, `--global` for a
-personal ledger at `~/.design-director/taste.jsonl`, or `$DD_TASTE`. Commit the project
-ledger: it is the project's design memory.
+personal ledger at `$DDR_HOME/taste.jsonl` (default `~/.design-director`), or `$DD_TASTE`.
+Commit the project ledger: it is the project's design memory.
+
+Add `--domain <slug>` to any event and it also lands in that design domain's ledger,
+where shipped work, wins and rules learnt from misses raise the domain's confidence
+and unresolved misses lower it (`ddr domain status <slug>`).
 
 ## Tags
 
