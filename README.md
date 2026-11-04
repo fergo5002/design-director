@@ -92,9 +92,11 @@ merges two that turn out to be one, and retires references that have dated (they
 in a graveyard so they are never quietly re-added). `ddr domain audit --online` finds
 stale, weak, dead, moved and contradictory entries and overlapping domains.
 
-The repo ships starter domains in `domains/`, researched with the same loop. Your first
-write to one forks it into your own home; `ddr domain sync <slug>` pulls later upstream
-additions without bringing back anything you retired.
+The repo ships starter domains in `domains/`, researched with the same loop. Writing to
+one gives you your own layer on top of it: your references, retirements, notes and ledger
+live in your home, and the starter's research is read live underneath, so `git pull`
+keeps improving it without ever overwriting your judgement. `ddr domain resolve` closes a
+rejection once it has produced a rule, and `ddr domain edit` changes a domain's keywords.
 
 ## What you get
 
@@ -127,7 +129,7 @@ avoid, and how it was verified.
 |---|---|
 | `ddr domain match "<brief>"` | Which domains a brief falls in and how much the agent knows about each. |
 | `ddr domain brief/status/plan` | The dossier and best references; the score and its gaps; what the stakes need. |
-| `ddr domain new/ref/relate/merge/audit/sync` | Build, curate and share the expertise. |
+| `ddr domain new/edit/ref/relate/merge/resolve/audit` | Build, curate and share the expertise. |
 | `ddr taste brief` | What was rejected, what landed, what is **saturated**, and three directions to make. |
 | `ddr taste win/miss/shipped/error` | Log outcomes as they happen; `--domain <slug>` also feeds that domain's experience. |
 | `ddr sources search "<need>" -v` | Search the catalogue. `--kind mcp`, `--category product-ui`, `--min-signal 4`. |

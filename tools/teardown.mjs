@@ -115,7 +115,7 @@ function measure() {
   const stack = [
     [/__NEXT_DATA__|\/_next\//, 'Next.js'], [/data-wf-site|webflow/i, 'Webflow'], [/framerusercontent|data-framer/i, 'Framer'],
     [/cdn\.shopify|Shopify\.theme/, 'Shopify'], [/static\.wixstatic|wix\.com/i, 'Wix'], [/squarespace/i, 'Squarespace'],
-    [/wp-content|wp-includes/, 'WordPress'], [/elementor/i, 'Elementor'], [/divi/i, 'Divi'], [/astro-island|\/_astro\//, 'Astro'],
+    [/wp-content|wp-includes/, 'WordPress'], [/elementor/i, 'Elementor'], [/et_pb_|\/themes\/Divi\//, 'Divi'], [/astro-island|\/_astro\//, 'Astro'],
     [/__nuxt|_nuxt\//, 'Nuxt'], [/data-reactroot|react/i, 'React'], [/tailwind/i, 'Tailwind classes'],
   ].filter(([re]) => re.test(html)).map(([, n]) => n);
   if (gen) stack.unshift(`generator: ${gen.content}`);
@@ -124,7 +124,7 @@ function measure() {
   const headings = [...document.querySelectorAll('h1, h2, h3')].filter(vis).slice(0, 30).map((h) => `${h.tagName.toLowerCase()} ${(h.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 90)}`);
   const navLabels = [...document.querySelectorAll('nav a, header a')].filter(vis).map((a) => (a.innerText || '').trim()).filter((t) => t && t.length < 30).slice(0, 14);
   const ctas = [...document.querySelectorAll('button, a[class*="btn" i], a[class*="button" i], [role="button"], input[type="submit"]')].filter(vis)
-    .map((b) => (b.innerText || b.value || b.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ')).filter((t) => t && t.length < 40);
+    .map((b) => (b.innerText || b.value || b.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ')).filter((t) => t && t.length < 40 && t.length > 2 && !/^[\d\s.<>‹›«»←→]+$/.test(t));
   const ctaCounts = {}; for (const c of ctas) ctaCounts[c] = (ctaCounts[c] || 0) + 1;
   const aboveFoldCta = ctas.length && [...document.querySelectorAll('button, a[class*="btn" i], a[class*="button" i]')].filter(vis).some((b) => b.getBoundingClientRect().top < vh);
   const main = document.querySelector('main') || document.body;
@@ -134,7 +134,7 @@ function measure() {
 
   // generated-design tells, measured
   const text = (main.innerText || '').toLowerCase();
-  const SLOP_WORDS = ['seamless', 'unlock', 'elevate', 'empower', 'revolutionise', 'revolutionize', 'cutting-edge', 'next-level', 'supercharge', 'effortless', 'game-changer', 'in today\'s', 'your journey', 'world-class', 'tailored solutions', 'nestled', 'oasis', 'hidden gem'];
+  const SLOP_WORDS = ['seamless', 'unlock', 'elevate', 'empower', 'revolutionise', 'revolutionize', 'cutting-edge', 'next-level', 'supercharge', 'effortless', 'game-changer', 'in today\'s', 'your journey', 'world-class', 'tailored solutions', 'nestled', 'oasis', 'hidden gem', 'home away from home', 'look no further', 'unforgettable', 'second to none', 'one-stop shop'];
   const eyebrows = [...document.querySelectorAll('h1, h2')].filter(vis).filter((h) => { const prev = h.previousElementSibling; if (!prev || !vis(prev)) return false;
     const s = getComputedStyle(prev); return s.textTransform === 'uppercase' && parseFloat(s.fontSize) < 15 && (prev.innerText || '').length < 40; }).length;
   const gradientText = all.filter((el) => { const s = getComputedStyle(el); return (s.webkitBackgroundClip === 'text' || s.backgroundClip === 'text') && /gradient/.test(s.backgroundImage); }).length;
@@ -142,7 +142,17 @@ function measure() {
   const glass = all.filter((el) => { const s = getComputedStyle(el); return (s.backdropFilter || s.webkitBackdropFilter || 'none') !== 'none'; }).length;
   const emojiHeadings = [...document.querySelectorAll('h1,h2,h3,h4')].filter((h) => /\p{Extended_Pictographic}/u.test(h.innerText || '')).length;
   const triads = [...document.querySelectorAll('div, ul, section')].filter((el) => { const k = [...el.children]; return k.length === 3 && k.every((c) => c.tagName === k[0].tagName && c.className === k[0].className) && k.every((c) => c.querySelector('svg, img') && c.querySelector('h3, h4, strong')); }).length;
-  const slop = { words: SLOP_WORDS.filter((w) => text.includes(w)), eyebrows, gradientText, purpleGradients, glass, emojiHeadings, iconCardTriads: triads, defaultControls };
+  const OVERUSED = /^(inter|poppins|montserrat|roboto|open sans|lato|nunito|raleway|plus jakarta sans|space grotesk|dm sans|oswald|bebas neue|playfair display)$/i;
+  const lead = top(fam, 1, chars)[0];
+  const defaultFace = lead && OVERUSED.test(lead.value) ? `${lead.value} ${Math.round(lead.share * 100)}%` : null;
+  const paras = [...document.querySelectorAll('p')].filter(vis).filter((x) => (x.innerText || '').length > 60);
+  const justifiedParagraphs = paras.filter((x) => getComputedStyle(x).textAlign === 'justify').length;
+  const hs = [...document.querySelectorAll('h1, h2, h3')].filter(vis);
+  const shareOf = (f) => (hs.length ? +(hs.filter(f).length / hs.length).toFixed(2) : 0);
+  const capsHeadings = shareOf((x) => getComputedStyle(x).textTransform === 'uppercase' || ((x.innerText || '').length > 6 && x.innerText === x.innerText.toUpperCase() && /[A-Z]/.test(x.innerText)));
+  const centredHeadings = shareOf((x) => getComputedStyle(x).textAlign === 'center');
+  const slop = { words: SLOP_WORDS.filter((w) => text.includes(w)), eyebrows, gradientText, purpleGradients, glass, emojiHeadings,
+    iconCardTriads: triads, defaultControls, defaultFace, justifiedParagraphs, capsHeadings, centredHeadings };
 
   return {
     title: document.title, lang: document.documentElement.lang, words, screens: +(document.documentElement.scrollHeight / vh).toFixed(1),
@@ -217,15 +227,20 @@ for (const url of urls) {
           // a control submits only when it has a form to submit; a bare <button> reports type "submit" anyway
           const isSubmit = await target.evaluate((el) => !!el.form && ['submit', 'image'].includes(el.type)).catch(() => false);
           if (isSubmit) { step.note = 'refused: that control submits a form'; rec.walk.push(step); break; }
+          const before = await page.evaluate(() => location.href + '|' + document.body.innerText.length + '|' + document.body.innerText.slice(0, 2000));
           await target.click({ timeout: 6000 });
           await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
           await page.waitForTimeout(1500);
           const f = path.join(dir, `walk-${String(i + 1).padStart(2, '0')}.png`);
           await page.screenshot({ path: f }); rec.files.push(f);
           step.ok = true; step.url = page.url(); step.shot = f;
+          const after = await page.evaluate(() => location.href + '|' + document.body.innerText.length + '|' + document.body.innerText.slice(0, 2000));
+          step.changed = after !== before;
+          if (!step.changed) step.note = 'the click changed nothing visible: a hover menu, a dead control, or a script that did not load';
           step.sensitive = await page.evaluate(() => !!document.querySelector('input[type=password], input[autocomplete*="cc-"], input[name*="card" i]'));
           if (step.sensitive) { step.note = 'stopped: a password or card field is on screen'; rec.walk.push(step); break; }
         } catch (e) { step.note = `could not click: ${e.message.split('\n')[0].slice(0, 120)}`; rec.walk.push(step); break; }
+        if (!step.changed) { rec.walk.push(step); continue; }
         rec.walk.push(step);
       }
     }
@@ -238,7 +253,9 @@ for (const url of urls) {
   const line = (k) => (r[k] ? `${r[k].family} ${r[k].size}/${r[k].lineHeight} weight ${r[k].weight}${r[k].tracking !== 'normal' ? ' tracking ' + r[k].tracking : ''}${r[k].transform !== 'none' ? ' ' + r[k].transform : ''}` : 'none found');
   const s = d.slop || {};
   const tells = [s.words && s.words.length ? `stock copy (${s.words.join(', ')})` : '', s.eyebrows ? `${s.eyebrows} eyebrows` : '', s.gradientText ? `${s.gradientText} gradient-text elements` : '',
-    s.purpleGradients ? 'purple-blue gradients' : '', s.glass ? `${s.glass} glass (backdrop-filter) elements` : '', s.emojiHeadings ? `${s.emojiHeadings} emoji headings` : '', s.iconCardTriads ? `${s.iconCardTriads} icon-card triads` : '', s.defaultControls ? `${s.defaultControls} browser-default controls` : ''].filter(Boolean);
+    s.purpleGradients ? 'purple-blue gradients' : '', s.glass ? `${s.glass} glass (backdrop-filter) elements` : '', s.emojiHeadings ? `${s.emojiHeadings} emoji headings` : '', s.iconCardTriads ? `${s.iconCardTriads} icon-card triads` : '', s.defaultControls ? `${s.defaultControls} browser-default controls` : '',
+    s.defaultFace ? `an overused default face carries the text (${s.defaultFace})` : '', s.justifiedParagraphs ? `${s.justifiedParagraphs} justified paragraphs` : '',
+    s.capsHeadings >= 0.6 ? `${Math.round(s.capsHeadings * 100)}% of headings in capitals` : '', s.centredHeadings >= 0.8 ? `${Math.round(s.centredHeadings * 100)}% of headings centred` : ''].filter(Boolean);
   const md = [
     `# Teardown: ${url}`, '', `Captured ${rec.captured}. Folder: ${dir}`, d.error ? `\nProblem: ${d.error}` : '', '',
     '## Look at these first', '', ...rec.files.map((f) => `- ${f}`), '',

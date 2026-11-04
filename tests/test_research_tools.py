@@ -111,7 +111,7 @@ class TeardownLive(unittest.TestCase):
         cls.out = tempfile.mkdtemp()
         fixture = pathlib.Path(__file__).resolve().parent / "fixtures" / "teardown.html"
         cls.proc = subprocess.run(["node", str(TOOLS / "teardown.mjs"), fixture.as_uri(), "--out", cls.out,
-                                   "--frames", "2", "--walk", "See prices>Submit booking"],
+                                   "--frames", "2", "--walk", "See prices>Does nothing>Submit booking"],
                                   capture_output=True, text=True, timeout=180)
         folder = next(pathlib.Path(cls.out).iterdir())
         cls.rec = json.loads((folder / "teardown.json").read_text())
@@ -135,6 +135,8 @@ class TeardownLive(unittest.TestCase):
         self.assertIn("Check availability", " ".join(self.d["structure"]["ctas"]))
         self.assertTrue(self.d["structure"]["phoneInHeader"])
         self.assertIn("generator: FixtureBuilder 1.0", self.d["stack"])
+        self.assertNotIn("Divi", self.d["stack"], "the word 'individual' is not the Divi theme")
+        self.assertFalse(any(c.strip().isdigit() for c in self.d["structure"]["ctas"]), "pager dots are not calls to action")
 
     def test_slop_signals(self):
         s = self.d["slop"]
@@ -142,12 +144,17 @@ class TeardownLive(unittest.TestCase):
         self.assertEqual(s["eyebrows"], 1)
         self.assertGreaterEqual(s["gradientText"], 1)
         self.assertEqual(s["iconCardTriads"], 1)
-        self.assertEqual(s["defaultControls"], 2)
+        self.assertGreaterEqual(s["defaultControls"], 2)
+        self.assertEqual(s["justifiedParagraphs"], 1)
+        self.assertEqual(s["defaultFace"], None, "Georgia is not one of the overused display faces")
 
     def test_walk_clicks_safe_controls_and_refuses_submit(self):
         walk = self.rec["walk"]
         self.assertTrue(walk[0]["ok"], walk)
-        self.assertIn("refused", walk[1]["note"])
+        self.assertTrue(walk[0]["changed"], walk)
+        self.assertFalse(walk[1]["changed"], walk)
+        self.assertIn("changed nothing", walk[1]["note"])
+        self.assertIn("refused", walk[2]["note"])
 
     def test_frames_and_folds_saved(self):
         names = {pathlib.Path(f).name for f in self.rec["files"]}

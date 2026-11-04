@@ -24,8 +24,9 @@ looked at since last year is no longer an area of expertise. It measures groundi
 talent: a high score means the agent has done the homework, never that the work is good.
 
 Domains live in $DDR_HOME/domains (default ~/.design-director/domains). Starter domains
-ship in this repo's domains/ folder; the first write to one forks it into your home, and
-`sync` pulls later upstream additions without resurrecting anything you retired.
+ship in this repo's domains/ folder; the first write to one gives you a layer over it in
+your home: your references, retirements, notes and ledger, with the starter read live
+underneath so later upstream research keeps arriving.
 
     ddr domain match "a booking site for a sauna in Galway"
     ddr domain brief wellness onboarding
@@ -223,8 +224,57 @@ def load(slug: str, follow: bool = True) -> dict | None:
         for r in refs:
             r.setdefault("status", "active")
         dossier = (path / "dossier.md").read_text(encoding="utf-8") if (path / "dossier.md").exists() else ""
-        return {"slug": meta.get("slug", slug), "meta": meta, "related": related, "refs": refs,
-                "ledger": _read_ledger(path / "ledger.jsonl"), "dossier": dossier, "path": path, "layer": layer}
+        dom = {"slug": meta.get("slug", slug), "meta": meta, "related": related, "refs": refs,
+               "ledger": _read_ledger(path / "ledger.jsonl"), "dossier": dossier, "own_dossier": dossier,
+               "path": path, "layer": layer}
+        if layer == "home" and meta.get("forked_from") == "seed":
+            _overlay_seed(dom)
+        return dom
+
+
+def _seed_folder(slug: str):
+    s = pathlib.Path(SEEDS) / slug
+    return s if (s / "domain.toml").exists() else None
+
+
+def _overlay_seed(dom: dict):
+    """A fork is a layer over the repo's starter, not a frozen copy: the starter's references,
+    dossier and relations are read live underneath your own, so upstream research keeps flowing
+    in. Your references override the starter's by address (a retirement in your layer hides
+    theirs) and your dossier notes sit under each of their sections."""
+    seed = _seed_folder(dom["slug"])
+    if seed is None or seed.resolve() == dom["path"].resolve():
+        return
+    data = sources.loads((seed / "domain.toml").read_text(encoding="utf-8"))
+    for r in data.pop("related", []):
+        if not any(x.get("slug") == r.get("slug") for x in dom["related"]):
+            dom["related"].append(dict(r, _layer="seed"))
+    for k in ("keywords", "aliases"):
+        mine = dom["meta"].get(k, [])
+        dom["meta"][k] = mine + [x for x in data.get(k, []) if x not in mine]
+    have = {norm_url(r["url"]) for r in dom["refs"]}
+    if (seed / "refs.toml").exists():
+        for r in sources.loads((seed / "refs.toml").read_text(encoding="utf-8")).get("ref", []):
+            if norm_url(r["url"]) not in have:
+                r = dict(r, _layer="seed")
+                r.setdefault("status", "active")
+                dom["refs"].append(r)
+    seed_text = (seed / "dossier.md").read_text(encoding="utf-8") if (seed / "dossier.md").exists() else ""
+    dom["dossier"] = _combine_dossiers(seed_text, dom["own_dossier"])
+    dom["seed_path"] = seed
+
+
+def _combine_dossiers(seed_text: str, own_text: str) -> str:
+    a, b = dossier_sections(seed_text), dossier_sections(own_text)
+    title = (re.search(r"^# .+$", seed_text, re.M) or re.search(r"^# .+$", own_text, re.M))
+    out = [title.group(0) if title else "# Dossier", ""]
+    for name in list(SECTIONS) + [k for k in list(a) + list(b) if k not in SECTIONS]:
+        if name in out:
+            continue
+        parts = [x for x in (a.get(name, ""), b.get(name, "")) if x]
+        if parts:
+            out += [f"## {name}", "", "\n\n".join(parts), ""]
+    return "\n".join(out)
 
 
 def slugs() -> list[str]:
@@ -273,7 +323,7 @@ def create(slug, title, kind, summary="", keywords=(), aliases=(), today=None) -
 
 
 def path_for_write(slug: str, today=None) -> pathlib.Path:
-    """The writable folder for a domain, forking a repo seed into DDR_HOME on first write."""
+    """The writable folder for a domain, making an empty layer over a repo starter on first write."""
     slug = slugify(slug)
     path, layer = _folder(slug)
     if path is None:
@@ -281,21 +331,32 @@ def path_for_write(slug: str, today=None) -> pathlib.Path:
     if layer == "home":
         return path
     dst = home_domains() / slug
-    shutil.copytree(path, dst, ignore=shutil.ignore_patterns("shots"))
-    data = sources.loads((dst / "domain.toml").read_text(encoding="utf-8"))
-    related = data.pop("related", [])
+    dst.mkdir(parents=True, exist_ok=True)
+    data = sources.loads((path / "domain.toml").read_text(encoding="utf-8"))
+    data.pop("related", None)
     data["forked_from"] = "seed"
     data["forked_on"] = _today(today).isoformat()
-    _write_meta(dst / "domain.toml", data, related)
-    if not (dst / "ledger.jsonl").exists():
-        (dst / "ledger.jsonl").touch()
+    data["keywords"], data["aliases"] = [], []   # read live from the starter
+    _write_meta(dst / "domain.toml", data, [])
+    _write_refs(dst / "refs.toml", [])
+    body = f"# {data.get('title', slug)}\n\n<!-- Your own notes. The starter's dossier is read live from the repo and sits above\n" \
+           "     these under each heading, so upstream research keeps arriving with git pull. -->\n\n"
+    for sec in SECTIONS:
+        body += f"## {sec}\n\n"
+    (dst / "dossier.md").write_text(body, encoding="utf-8")
+    (dst / "ledger.jsonl").touch()
     return dst
 
 
 def _save(dom: dict, today=None):
-    dom["meta"]["updated"] = _today(today).isoformat()
-    _write_meta(dom["path"] / "domain.toml", dom["meta"], dom["related"])
-    _write_refs(dom["path"] / "refs.toml", dom["refs"])
+    meta = dict(dom["meta"], updated=_today(today).isoformat())
+    dom["meta"]["updated"] = meta["updated"]
+    if dom.get("seed_path"):   # keywords and aliases from the starter stay in the starter
+        seed = sources.loads((dom["seed_path"] / "domain.toml").read_text(encoding="utf-8"))
+        for k in ("keywords", "aliases"):
+            meta[k] = [x for x in meta.get(k, []) if x not in seed.get(k, [])]
+    _write_meta(dom["path"] / "domain.toml", meta, [r for r in dom["related"] if not r.get("_layer")])
+    _write_refs(dom["path"] / "refs.toml", [r for r in dom["refs"] if not r.get("_layer")])
 
 
 def _writable(slug: str, today=None) -> dict:
@@ -355,8 +416,10 @@ def add_ref(slug, name, url, verdict, angle, evidence, take="", avoid="", score=
 
 
 def _find_ref(dom: dict, key: str) -> dict:
+    """Find a reference to change. A starter's reference is taken into your layer first."""
     for r in dom["refs"]:
         if r["id"] == key or norm_url(r["url"]) == norm_url(key):
+            r.pop("_layer", None)
             return r
     raise ValueError(f"no reference {key!r} in {dom['slug']}")
 
@@ -426,15 +489,46 @@ def active(dom) -> list[dict]:
 
 # ---------------------------------------------------------------- ledger, graph
 
-def log(slug, kind, what, why="", rule="", prevention="", tags=(), project="", today=None) -> dict:
+def _rewrite_ledger(dom: dict):
+    with (dom["path"] / "ledger.jsonl").open("w", encoding="utf-8") as f:
+        for ev in dom["ledger"]:
+            f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+
+
+def resolve(slug, what, rule, today=None) -> dict:
+    """Close an open rejection by naming the rule it produced."""
+    if not (rule or "").strip():
+        raise ValueError("name the rule the rejection produced")
+    dom = _writable(slug, today)
+    open_ = [e for e in dom["ledger"] if e.get("kind") == "miss" and not e.get("rule")]
+    exact = [e for e in open_ if e["what"].lower() == what.strip().lower()]
+    hits = exact or [e for e in open_ if what.strip().lower() in e["what"].lower()]
+    if not hits:
+        raise ValueError(f"no open rejection matches {what!r}; `ddr domain brief {dom['slug']}` lists the ledger")
+    if len(hits) > 1:
+        raise ValueError("several open rejections match: " + "; ".join(e["what"] for e in hits[:5]))
+    hits[0]["rule"] = rule.strip()
+    hits[0]["resolved"] = _today(today).isoformat()
+    _rewrite_ledger(dom)
+    return hits[0]
+
+
+def log(slug, kind, what, why="", rule="", prevention="", tags=(), project="", today=None, date=None) -> dict:
     if kind not in LEDGER_KINDS:
         raise ValueError(f"kind must be one of {LEDGER_KINDS}")
     if not (what or "").strip():
         raise ValueError("say what it was, specifically")
     if kind in ("miss", "error") and not (why or "").strip():
         raise ValueError(f"a {kind} needs --why, or the same mistake comes back")
+    if date is not None and _date(date) is None:
+        raise ValueError("date must be YYYY-MM-DD")
     dom = _writable(slug, today)
-    ev = {"date": _today(today).isoformat(), "kind": kind, "what": what.strip()}
+    if kind == "miss" and rule:
+        same = [e for e in dom["ledger"] if e.get("kind") == "miss" and not e.get("rule")
+                and e["what"].lower() == what.strip().lower()]
+        if same:
+            return resolve(dom["slug"], what, rule, today)
+    ev = {"date": _date(date).isoformat() if date else _today(today).isoformat(), "kind": kind, "what": what.strip()}
     for k, v in (("why", why), ("rule", rule), ("prevention", prevention), ("project", project)):
         if v:
             ev[k] = v
@@ -450,9 +544,31 @@ def relate(a, b, how="", today=None):
     if da["slug"] == db["slug"]:
         raise ValueError("a domain cannot relate to itself")
     for x, y in ((da, db), (db, da)):
-        if not any(r.get("slug") == y["slug"] for r in x["related"]):
+        cur = next((r for r in x["related"] if r.get("slug") == y["slug"]), None)
+        if cur is None:
             x["related"].append({"slug": y["slug"], "how": how})
-            _save(x, today)
+        elif how and cur.get("how") != how:
+            cur["how"] = how
+            cur.pop("_layer", None)
+        else:
+            continue
+        _save(x, today)
+
+
+def edit_domain(slug, title=None, summary=None, keywords=None, add_keywords=(), aliases=None, add_aliases=(),
+                today=None) -> dict:
+    dom = _writable(slug, today)
+    m = dom["meta"]
+    if title:
+        m["title"] = title
+    if summary is not None and summary != "":
+        m["summary"] = summary
+    for k, replace, extra in (("keywords", keywords, add_keywords), ("aliases", aliases, add_aliases)):
+        cur = [x.strip().lower() for x in replace if x.strip()] if replace is not None else list(m.get(k, []))
+        cur += [x.strip().lower() for x in extra if x.strip() and x.strip().lower() not in cur]
+        m[k] = cur
+    _save(dom, today)
+    return load(dom["slug"])
 
 
 def merge(src, dst, today=None) -> dict:
@@ -476,12 +592,12 @@ def merge(src, dst, today=None) -> dict:
         if r["slug"] not in (d["slug"],) and not any(x["slug"] == r["slug"] for x in d["related"]):
             d["related"].append(r)
     d["related"] = [r for r in d["related"] if r["slug"] != s["slug"]]
-    body = re.sub(r"^# .*\n", "", s["dossier"], count=1).strip()
+    body = re.sub(r"^# .*\n", "", s["own_dossier"] if s.get("seed_path") else s["dossier"], count=1).strip()
     body = re.sub(r"^## ", "### ", body, flags=re.M)
     day = _today(today).isoformat()
     if body:
         (d["path"] / "dossier.md").write_text(
-            d["dossier"].rstrip() + f"\n\n## Merged from {s['slug']} ({day})\n\n"
+            d["own_dossier"].rstrip() + f"\n\n## Merged from {s['slug']} ({day})\n\n"
             "<!-- Fold these notes into the sections above, then delete this block. -->\n\n" + body + "\n",
             encoding="utf-8")
     with (d["path"] / "ledger.jsonl").open("a", encoding="utf-8") as f:
@@ -495,7 +611,12 @@ def merge(src, dst, today=None) -> dict:
 
 
 def sync(slug, today=None) -> list[dict]:
-    """Pull references the repo's seed has gained since you forked it, except ones you retired."""
+    """Starters are read live under your layer, so there is nothing to copy for a layered fork.
+    For a fork made by an older version (a full copy), copy across references the starter has
+    gained since, except ones you retired."""
+    dom0 = load(slug)
+    if dom0 is not None and dom0.get("seed_path"):
+        return []
     seed = pathlib.Path(SEEDS) / slugify(slug)
     if not (seed / "refs.toml").exists():
         return []
@@ -572,8 +693,9 @@ def confidence(dom: dict, today=None) -> dict:
     }
     raw = max(0.0, sum(parts.values()))
     cap, ceiling = "", 100
-    if len(hands_on) < 3:
-        ceiling, cap = 25, f"capped at 25: only {len(hands_on)} references actually looked at; a search result is not a look"
+    judged = sum(1 for e in led if e.get("kind") in ("win", "shipped") or (e.get("kind") == "miss" and e.get("why")))
+    if len(hands_on) < 3 and judged < 6:
+        ceiling, cap = 25, f"capped at 25: only {len(hands_on)} references actually looked at and {judged} pieces of judged work; a search result is not a look"
     elif _words(secs.get("Category slop", "")) < 30:
         ceiling, cap = 60, "capped at 60: the category's slop is not written down, and you cannot avoid what you have not named"
     score = int(round(min(raw, ceiling)))
@@ -831,6 +953,13 @@ def main(argv=None):
     lg = sub.add_parser("log"); lg.add_argument("slug"); lg.add_argument("kind", choices=LEDGER_KINDS)
     lg.add_argument("what"); lg.add_argument("--why", default=""); lg.add_argument("--rule", default="")
     lg.add_argument("--prevention", default=""); lg.add_argument("--tags", default=""); lg.add_argument("--project", default="")
+    lg.add_argument("--date", help="when it happened (YYYY-MM-DD), so old events decay properly")
+    rz = sub.add_parser("resolve", help="close an open rejection by naming the rule it produced")
+    rz.add_argument("slug"); rz.add_argument("what"); rz.add_argument("--rule", required=True)
+    ed = sub.add_parser("edit", help="change a domain's title, summary, keywords or aliases")
+    ed.add_argument("slug"); ed.add_argument("--title"); ed.add_argument("--summary")
+    ed.add_argument("--keywords", help="replace the keywords"); ed.add_argument("--add-keywords", default="")
+    ed.add_argument("--aliases", help="replace the aliases"); ed.add_argument("--add-aliases", default="")
     r = sub.add_parser("ref"); rs = r.add_subparsers(dest="rcmd", required=True)
     ra = rs.add_parser("add"); ra.add_argument("slug")
     ra.add_argument("--name", required=True); ra.add_argument("--url", required=True)
@@ -916,7 +1045,10 @@ def main(argv=None):
         if a.cmd == "path":
             print(path_for_write(need(a.slug)["slug"])); return 0
         if a.cmd == "sync":
-            added = sync(need(a.slug)["slug"])
+            d0 = need(a.slug)
+            if d0.get("seed_path"):
+                print("nothing to sync: the starter is read live under your layer"); return 0
+            added = sync(d0["slug"])
             print(f"pulled {len(added)} new references from the repo seed" + "".join(f"\n  + {x['name']} {x['url']}" for x in added))
             return 0
         if a.cmd == "brief":
@@ -936,6 +1068,12 @@ def main(argv=None):
                 print(f"{f['domain']:20} {f['kind']:13} {f['detail']}\n{'':34} -> {f['fix']}")
             print(f"{len(found)} findings")
             return 0
+        if a.cmd == "resolve":
+            ev = resolve(a.slug, a.what, a.rule); print(f"resolved '{ev['what']}' with {ev['rule']}"); return 0
+        if a.cmd == "edit":
+            d = edit_domain(a.slug, a.title, a.summary, _csv(a.keywords) if a.keywords is not None else None,
+                            _csv(a.add_keywords), _csv(a.aliases) if a.aliases is not None else None, _csv(a.add_aliases))
+            print(f"edited {d['slug']}: {', '.join(d['meta'].get('keywords', []))}"); return 0
         if a.cmd == "relate":
             relate(a.a, a.b, a.how); print(f"related {a.a} <-> {a.b}"); return 0
         if a.cmd == "merge":
@@ -943,7 +1081,7 @@ def main(argv=None):
             print(f"merged {a.src} into {d['slug']}; fold the merged notes in {d['path'] / 'dossier.md'} into its sections")
             return 0
         if a.cmd == "log":
-            ev = log(a.slug, a.kind, a.what, a.why, a.rule, a.prevention, _csv(a.tags), a.project)
+            ev = log(a.slug, a.kind, a.what, a.why, a.rule, a.prevention, _csv(a.tags), a.project, date=a.date)
             print(f"logged {ev['kind']} to {a.slug}")
             if a.kind == "miss" and not a.rule:
                 print("now edit the rule that allowed it, then log it again with --rule")

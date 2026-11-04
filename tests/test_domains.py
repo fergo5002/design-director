@@ -282,7 +282,7 @@ class Seeds(Base):
         # the seed in the repo is untouched
         self.assertEqual((self.seeds / "local-services" / "refs.toml").read_text().count("[[ref]]"), 1)
 
-    def test_sync_pulls_new_seed_refs_but_not_graveyarded_ones(self):
+    def test_fork_is_a_layer_so_later_seed_work_flows_through(self):
         self.seed()
         self.d.path_for_write("local-services")
         r = self.d.load("local-services")["refs"][0]
@@ -290,10 +290,23 @@ class Seeds(Base):
         with open(self.seeds / "local-services" / "refs.toml", "a") as f:
             f.write('\n[[ref]]\nid = "c"\nname = "C"\nurl = "https://c.example"\nverdict = "exemplar"\n'
                     'angle = "outside"\nevidence = "visited"\ntake = "t3"\nscore = 4\nseen = "2026-11-02"\nstatus = "active"\n')
-        added = self.d.sync("local-services")
-        self.assertEqual([x["url"] for x in added], ["https://c.example"])
-        statuses = {x["url"]: x["status"] for x in self.d.load("local-services")["refs"]}
-        self.assertEqual(statuses["https://a.example"], "retired")
+        (self.seeds / "local-services" / "dossier.md").write_text("# Local\n\n## Category slop\n\nUpstream wrote this later.\n")
+        dom = self.d.load("local-services")
+        statuses = {x["url"]: x["status"] for x in dom["refs"]}
+        self.assertEqual(statuses["https://a.example"], "retired", "your retirement overrides the seed")
+        self.assertEqual(statuses["https://c.example"], "active", "new seed work appears without a sync")
+        self.assertIn("Upstream wrote this later.", dom["dossier"])
+        home_refs = (self.home / "domains" / "local-services" / "refs.toml").read_text()
+        self.assertNotIn("c.example", home_refs, "seed refs are read, not copied")
+
+    def test_own_notes_sit_beside_the_seed_text(self):
+        self.seed()
+        (self.seeds / "local-services" / "dossier.md").write_text("# Local\n\n## Language\n\nSeed language.\n")
+        p = self.d.path_for_write("local-services")
+        (p / "dossier.md").write_text("# Local\n\n## Language\n\nMy own language notes.\n")
+        secs = self.d.dossier_sections(self.d.load("local-services")["dossier"])
+        self.assertIn("Seed language.", secs["Language"])
+        self.assertIn("My own language notes.", secs["Language"])
 
 
 class Audit(Base):
@@ -396,6 +409,64 @@ class Feedback(Base):
         self.assertEqual(found["walled"], "blocked")
         self.assertEqual(found["gone"], "dead")
         self.assertEqual(found["moved"], "moved")
+
+
+class Record(Base):
+    """Fixes for friction seeding a person's own record."""
+
+    def test_resolve_closes_an_open_miss(self):
+        self.fintech()
+        self.d.log("fintech", "miss", "Card grid of KPIs", why="nothing leads", today=TODAY)
+        self.assertLess(self.d.confidence(self.d.load("fintech"), today=TODAY)["parts"]["unresolved"], 0)
+        self.d.resolve("fintech", "card grid", rule="DASHBOARDS.md Part 2", today=TODAY)
+        c = self.d.confidence(self.d.load("fintech"), today=TODAY)
+        self.assertEqual(c["parts"]["unresolved"], 0)
+        self.assertGreater(c["parts"]["lessons"], 0)
+        with self.assertRaises(ValueError):
+            self.d.resolve("fintech", "nothing like this", rule="x")
+
+    def test_relogging_a_miss_with_a_rule_resolves_it_instead_of_duplicating(self):
+        self.fintech()
+        self.d.log("fintech", "miss", "Glass cards", why="dated", today=TODAY)
+        self.d.log("fintech", "miss", "Glass cards", why="dated", rule="SLOP.md", today=TODAY)
+        misses = [e for e in self.d.load("fintech")["ledger"] if e["kind"] == "miss"]
+        self.assertEqual(len(misses), 1)
+        self.assertEqual(misses[0]["rule"], "SLOP.md")
+
+    def test_log_takes_the_original_date_so_old_events_decay(self):
+        self.fintech()
+        ev = self.d.log("fintech", "win", "Old win", date="2025-01-01", today=TODAY)
+        self.assertEqual(ev["date"], "2025-01-01")
+        with self.assertRaises(ValueError):
+            self.d.log("fintech", "win", "x", date="yesterday")
+
+    def test_edit_domain_meta(self):
+        self.fintech()
+        self.d.edit_domain("fintech", title="Fintech", add_keywords=["neobank"], add_aliases=["challenger bank"])
+        m = self.d.load("fintech")["meta"]
+        self.assertEqual(m["title"], "Fintech")
+        self.assertIn("neobank", m["keywords"])
+        self.assertIn("lending", m["keywords"])
+        self.assertEqual(self.d.match("a challenger bank site")["sectors"][0]["slug"], "fintech")
+
+    def test_relate_again_updates_the_note(self):
+        self.fintech()
+        self.d.create("onboarding", "Onboarding", "pattern", keywords=["onboarding"])
+        self.d.relate("fintech", "onboarding", how="old")
+        self.d.relate("fintech", "onboarding", how="KYC-heavy signup")
+        self.assertEqual(self.d.load("onboarding")["related"][0]["how"], "KYC-heavy signup")
+
+    def test_a_long_judged_record_lifts_the_no_references_cap(self):
+        self.fintech()
+        self.write_dossier("fintech")
+        for i in range(4):
+            self.d.log("fintech", "win", f"Win {i}", today=TODAY)
+        for i in range(4):
+            self.d.log("fintech", "miss", f"Miss {i}", why="w", rule="r", today=TODAY)
+        self.d.log("fintech", "shipped", "Site", today=TODAY)
+        c = self.d.confidence(self.d.load("fintech"), today=TODAY)
+        self.assertNotIn("capped at 25", c["cap"])
+        self.assertGreater(c["score"], 25)
 
 if __name__ == "__main__":
     unittest.main()
