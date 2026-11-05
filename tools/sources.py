@@ -117,7 +117,7 @@ def _balance(s: str) -> int:
 
 
 def parse_toml_subset(text: str) -> dict:
-    """Parse [[table]] arrays of flat key = value pairs: strings (both quote styles),
+    """Parse [[table]] arrays and plain [table] tables of flat key = value pairs: strings (both quote styles),
     numbers, booleans and arrays (single or multi-line), with # comments. Enough for
     the catalogue and for hand-edited .design/lint.toml; anything else raises ValueError."""
     out: dict = {}
@@ -133,6 +133,12 @@ def parse_toml_subset(text: str) -> dict:
         if m:
             current = {}
             out.setdefault(m.group(1), []).append(current)
+            continue
+        m = re.fullmatch(r"\[([A-Za-z0-9_-]+)\]", s)   # a plain table, as brand.toml's [sources]
+        if m:
+            if m.group(1) in out:
+                raise ValueError(f"line {n}: duplicate table {m.group(1)!r}")
+            current = out[m.group(1)] = {}
             continue
         m = re.fullmatch(r"([A-Za-z0-9_-]+)\s*=\s*(.+)", s)
         if not m:

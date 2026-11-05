@@ -1,0 +1,6 @@
+# The house pack: rules every brand shares. Each brand pack names it with `extends = "house"`
+# and can override any of it (a brand that sets a face in its own stack has allowed that face).
+slug = "house"
+name = "House"
+status = "active"
+summary = "Cross-brand rules: no generated-default faces, no dashes standing in for punctuation, no filler copy."
