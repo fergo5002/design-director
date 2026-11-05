@@ -193,19 +193,13 @@ function measure({ probeAttr, generic }) {
     fontsLoaded: [...new Set(loaded)],
     probes,
     text: document.body.innerText || '',
-    // The words as written, before CSS text-transform (innerText applies it). Visible text nodes only.
+    // The words as written, before CSS text-transform: innerText with the transform switched off for
+    // one read, so inline tags never split a word ("Book<em>ing</em>") the way joining text nodes did.
     textAuthored: (() => {
-      const out = [];
-      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-        const el = n.parentElement;
-        if (!el || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/.test(el.tagName)) continue;
-        if (el.closest('[hidden],[aria-hidden="true"]')) continue;
-        const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden' || !el.getClientRects().length) continue;
-        out.push(n.nodeValue);
-      }
-      return out.join(' ').replace(/\s+/g, ' ').trim();
+      const style = document.createElement('style');
+      style.textContent = '*, *::before, *::after { text-transform: none !important; }';
+      document.head.appendChild(style);
+      try { return document.body.innerText || ''; } finally { style.remove(); }
     })(),
   };
 }
@@ -251,8 +245,11 @@ function fileSlugs(files) {
   const counts = {};
   for (const f of files) { const b = baseSlug(path.basename(f)); counts[b] = (counts[b] || 0) + 1; }
   const clash = files.filter((f) => counts[baseSlug(path.basename(f))] > 1);
+  const under = (f, dir) => { const r = path.relative(dir, path.resolve(f)); return r && !r.startsWith('..') && !path.isAbsolute(r); };
   let common = clash.length ? path.dirname(path.resolve(clash[0])) : '';
-  for (const f of clash) { while (common && !path.resolve(f).startsWith(common + path.sep)) common = path.dirname(common); }
+  for (const f of clash) {
+    while (!under(f, common) && path.dirname(common) !== common) common = path.dirname(common);  // stops at the root
+  }
   for (const f of files) {
     const b = baseSlug(path.basename(f));
     out.set(f, counts[b] > 1 ? baseSlug(path.relative(common, path.resolve(f))) : b);

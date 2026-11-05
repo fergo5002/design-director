@@ -83,6 +83,49 @@ class Contradictions(Home):
         self.assertTrue(merged)
 
 
+class Contractions(Home):
+    """Second review: contractions split on the apostrophe, so only "don't" counted as a negation."""
+    def test_contractions_are_negations(self):
+        import notes
+        for neg in ("doesn't", "isn\u2019t", "won't", "didn't"):
+            self.assertLess(notes.similarity("The hero does use a serif heading", f"The hero {neg} use a serif heading"), 1.0, neg)
+
+
+class JsxScan(Home):
+    """Second review: comment stripping hid copy, and generics and frontmatter read as copy."""
+    def setUp(self):
+        super().setUp()
+        import brandpack
+        self.bp = brandpack
+        d = self.root / "home" / "brands" / "acme"
+        d.mkdir(parents=True)
+        (d / "brand.toml").write_text('slug = "acme"\nname = "Acme"\nstatus = "active"\n')
+        (d / "tokens.json").write_text(json.dumps({"colors": {"allowed": {}}, "fonts": {}, "copy": {"banned_phrases": ["seamless", "unlock"]}}))
+
+    def rules(self, name, text):
+        f = self.root / name
+        f.write_text(text)
+        return [x["rule"] for x in self.bp.lint([str(f)], "acme")["findings"]]
+
+    def test_slashes_inside_copy_are_still_copy(self):
+        self.assertIn("copy.banned-phrase", self.rules("a.tsx", "export const A = () => <p>Home // A seamless way</p>;\n"))
+        self.assertIn("copy.banned-phrase", self.rules("b.tsx", 'export const B = () => <><img src="//cdn.x/a.png"/><p>A seamless day</p></>;\n'))
+
+    def test_generics_and_interfaces_are_not_copy(self):
+        src = "interface Props {\n  items: Array<Item>\n  unlock: boolean\n  owner: Map<User>\n}\n"
+        self.assertEqual(self.rules("c.tsx", src), [])
+
+    def test_astro_frontmatter_is_not_copy(self):
+        src = "---\nconst unlock = Array<string>();\nconst x = 'seamless';\n---\n<p>Fine words</p>\n"
+        self.assertEqual(self.rules("d.astro", src), [])
+
+    def test_html_text_after_an_inline_tag_glued_to_a_word_is_copy(self):
+        self.assertIn("copy.banned-phrase", self.rules("f.html", "<p>First line<br>a seamless second line</p>\n"))
+
+    def test_a_line_comment_is_not_copy(self):
+        self.assertEqual(self.rules("e.tsx", "// a seamless helper\nexport const E = () => <p>Fine</p>;\n"), [])
+
+
 class WindowsChecks(unittest.TestCase):
     """Finding 7: a Windows path in a claim check keeps its backslashes."""
     def test_windows_split_keeps_backslashes(self):
@@ -92,6 +135,12 @@ class WindowsChecks(unittest.TestCase):
         self.assertEqual(claims._split(r'python "C:\My Brain\check.py" C1', windows=True),
                          ["python", r"C:\My Brain\check.py", "C1"])
         self.assertEqual(claims._split("python3 check.py 'C 1'", windows=False), ["python3", "check.py", "C 1"])
+
+    def test_windows_runs_the_command_line_unsplit(self):
+        # second review: --name="a b" split in two; Windows parses its own command line
+        import claims
+        self.assertEqual(claims._argv('python check.py --name="a b"', windows=True), 'python check.py --name="a b"')
+        self.assertEqual(claims._argv("python3 check.py 'C 1'", windows=False), ["python3", "check.py", "C 1"])
 
 
 class Waivers(unittest.TestCase):

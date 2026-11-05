@@ -418,18 +418,26 @@ def _blank(m) -> str:
     return re.sub(r"[^\n]", " ", m.group(0))
 
 
+# Visible text: what follows a real opening or closing tag up to the next tag. A tag's "<" never
+# follows a word character, so a TypeScript generic (Array<Item>) is not mistaken for markup.
+TAG_TEXT = re.compile(r"<[A-Za-z/!][^<>]*>([^<>{}]+)(?=<[A-Za-z/!])")
+TAG_TEXT_TS = re.compile(r"(?<![\w$.])<[A-Za-z/!][^<>]*>([^<>{}]+)(?=<[A-Za-z/!])")  # where generics exist
+
+
 def _markup_spans(text: str, suffix: str) -> dict:
     """{line: [visible text]} for a markup file, including text that runs over several lines (most
     formatted HTML puts a paragraph's words on their own line; the single-line scan missed them, review
-    2026-11-05). Script, style and comments are blanked first, keeping line numbers. In JSX a multi-line
-    span that reads like code (an arrow function before its markup) is not copy."""
+    2026-11-05). Script, style, HTML comments, Astro frontmatter and whole-line // comments are blanked
+    first, keeping line numbers. In JSX a multi-line span that reads like code is not copy."""
     t = re.sub(r"<(script|style)\b[^>]*>.*?</\1\s*>", _blank, text, flags=re.S | re.I)
     t = re.sub(r"<!--.*?-->", _blank, t, flags=re.S)
-    if suffix in (".jsx", ".tsx"):
+    if suffix == ".astro":
+        t = re.sub(r"\A\s*---\n.*?\n---[ \t]*(\n|\Z)", _blank, t, flags=re.S)
+    if suffix in (".jsx", ".tsx", ".astro", ".vue", ".svelte"):
         t = re.sub(r"/\*.*?\*/", _blank, t, flags=re.S)
-        t = re.sub(r"(?m)(^|[^:])//[^\n]*", lambda m: m.group(1) + " " * (len(m.group(0)) - len(m.group(1))), t)
+        t = re.sub(r"(?m)^[ \t]*//[^\n]*", _blank, t)  # a line comment only where the line starts with it
     spans: dict = {}
-    for m in re.finditer(r">([^<>{}]+)<", t):
+    for m in (TAG_TEXT_TS if suffix in (".jsx", ".tsx") else TAG_TEXT).finditer(t):
         raw = m.group(1)
         words = " ".join(raw.split())
         if len(words) < 3:

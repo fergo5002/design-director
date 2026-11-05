@@ -39,4 +39,4 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
       - name: Browser tests
-        run: python -m unittest tests.test_shots tests.test_evals tests.test_gate tests.test_review_findings -v
+        run: python -m unittest tests.test_shots tests.test_evals tests.test_gate tests.test_review_findings tests.test_research_tools -v

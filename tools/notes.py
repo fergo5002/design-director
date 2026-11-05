@@ -13,6 +13,8 @@ How the list stays useful as it grows:
   A note whose harmful count leads by two is marked `pruned`. Nothing is ever deleted.
 - Near-duplicates merge instead of piling up: token Jaccard of 0.8 or more, or a difflib
   ratio of 0.85 or more. The match is lexical, so the evidence list shows each sighting.
+  Two exceptions: notes of opposite polarity ("do" and "do not", contractions included) never
+  merge, and a person's own words merge only with the same words, since each is a fact.
 - `proposed` when one job suggested it, `kept` once seen again, voted helpful, or when it
   was the person's own words. Strong kept notes can be promoted into a domain's dossier or
   a brand's graphic language under `## Proposed guidance`, for a person to fold in.
@@ -172,7 +174,10 @@ NEGATIONS = {"not", "no", "never", "dont", "don", "doesnt", "isnt", "wasnt", "wo
              "without", "stop", "stopped", "less", "fewer", "nor", "neither"}
 
 
-def _polarity(tokens) -> int:
+def _polarity(text: str) -> int:
+    """1 when the text is negated an odd number of times. "doesn't" counts: the tokens split on the
+    apostrophe, so n't is read as "not" first (second review, 2026-11-05)."""
+    tokens = _tokens(re.sub(r"n[\u2019']t\b", " not", text.lower()))
     return sum(1 for t in tokens if t in NEGATIONS) % 2
 
 
@@ -183,7 +188,7 @@ def similarity(a: str, b: str) -> float:
     ta, tb = _tokens(a), _tokens(b)
     if not ta or not tb:
         return 1.0 if a.strip().lower() == b.strip().lower() else 0.0
-    if _polarity(ta) != _polarity(tb):
+    if _polarity(a) != _polarity(b):
         return 0.0
     sa, sb = set(ta), set(tb)
     jaccard = len(sa & sb) / len(sa | sb)

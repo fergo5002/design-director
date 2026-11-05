@@ -135,6 +135,31 @@ class ShotsEdges(unittest.TestCase):
         self.assertEqual(names, {"index__desktop-1440x900__motion__fold.png",
                                  "pricing-index__desktop-1440x900__motion__fold.png"})
 
+    def test_same_named_files_with_only_the_root_in_common_do_not_hang(self):
+        # second review: the common-folder walk never ended once it reached the root
+        a = pathlib.Path(tempfile.mkdtemp(dir="/tmp")); b = pathlib.Path(tempfile.mkdtemp(dir="/var/tmp"))
+        try:
+            for d in (a, b):
+                (d / "index.html").write_text("<!doctype html><title>x</title><h1>x</h1>")
+            out = self.dir / "shots"
+            node(ROOT / "tools" / "shots.mjs", "--file", a / "index.html", "--file", b / "index.html", "--out", out,
+                 "--flat", "--viewports", "desktop-1440x900", "--no-axe", timeout=90)
+            names = {p.name for p in out.rglob("*motion__fold.png")}
+            self.assertEqual(len(names), 2, names)
+        finally:
+            import shutil
+            shutil.rmtree(a, ignore_errors=True); shutil.rmtree(b, ignore_errors=True)
+
+    def test_authored_text_keeps_words_whole_and_ignores_text_transform(self):
+        page = self.dir / "t.html"
+        page.write_text('<!doctype html><title>t</title><h1 style="text-transform:uppercase">Book<em>ing</em> at <strong>4.2%</strong>.</h1>')
+        out = self.dir / "r.json"
+        node(ROOT / "tools" / "shots.mjs", "--file", page, "--out", self.dir / "s", "--flat",
+             "--viewports", "desktop-1440x900", "--no-axe", "--json-out", out)
+        row = next(r for r in json.loads(out.read_text())["results"] if r["motion"] == "no-preference")
+        self.assertIn("BOOKING AT 4.2%.", row["text"])
+        self.assertIn("Booking at 4.2%.", row["textAuthored"])
+
     def test_old_viewport_names_still_work(self):
         p = node(ROOT / "tools" / "shots.mjs", "--file", FIX / "gate" / "index.html", "--out", self.dir, "--flat",
                  "--json-out", self.dir / "r.json", "--viewports", "desktop,phone", "--no-axe")

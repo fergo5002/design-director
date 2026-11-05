@@ -94,8 +94,16 @@ def _split(cmd: str, windows=None) -> list:
     return [a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in "\"'" else a for a in shlex.split(cmd, posix=False)]
 
 
+def _argv(cmd: str, windows=None):
+    """What subprocess runs: on Windows the command line itself, which CreateProcess parses with the
+    Windows rules (quotes inside a token, backslashes in paths); elsewhere the POSIX split."""
+    if windows is None:
+        windows = os.name == "nt"
+    return cmd if windows else _split(cmd, windows=False)
+
+
 def _run(cmd: str, cwd, timeout):
-    argv = _split(cmd)
+    argv = _argv(cmd)
     if not argv:
         raise ValueError("empty check command")
     return subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)
