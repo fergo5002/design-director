@@ -520,10 +520,6 @@ class Templates(unittest.TestCase):
             tmp.cleanup()
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class LogoColours(unittest.TestCase):
     """A third party's real mark keeps its own colours: an inline SVG marked as a logo is not the
     brand's palette (found by the 2026-11-05 eval: Chase and Bank of America marks failed the lint)."""
@@ -554,8 +550,8 @@ class LogoColours(unittest.TestCase):
 
     SVG = '<svg width="24" height="24" fill="#117ACA" viewBox="0 0 24 24"><path fill="#012169" d="M0 0h24v24H0z"/></svg>'
 
-    def test_a_mark_inside_a_logo_wrapper_keeps_its_colours(self):
-        self.assertEqual(self.rules(f'<span class="logo">{self.SVG}</span><p style="color:#0b1b2b">Chase</p>\n'), [])
+    def test_a_mark_inside_a_marked_wrapper_keeps_its_colours(self):
+        self.assertEqual(self.rules(f'<span data-brand-role="logo">{self.SVG}</span><p style="color:#0b1b2b">Chase</p>\n'), [])
 
     def test_data_brand_role_on_the_svg(self):
         svg = self.SVG.replace("<svg ", '<svg data-brand-role="logo" ')
@@ -565,4 +561,37 @@ class LogoColours(unittest.TestCase):
         self.assertIn("color.off-palette", self.rules(f'<div class="hero">{self.SVG}</div>\n'))
 
     def test_colour_outside_the_mark_is_still_checked(self):
-        self.assertIn("color.off-palette", self.rules(f'<span class="logo">{self.SVG}</span><p style="color:#ff00ff">x</p>\n'))
+        self.assertIn("color.off-palette", self.rules(f'<span data-brand-role="logo">{self.SVG}</span><p style="color:#ff00ff">x</p>\n'))
+
+    def test_a_class_or_label_is_not_a_marker(self):
+        # second review: logo-wall, "Change logo" and the brand's own header logo all exempted content
+        for wrap in ('<div class="logo-wall">', '<button aria-label="Change logo">', '<a class="logo" href="/">'):
+            self.assertIn("color.off-palette", self.rules(f"{wrap}{self.SVG}</div>\n"), wrap)
+
+    def test_an_unclosed_or_custom_svg_tag_cannot_swallow_the_page(self):
+        html = ('<span data-brand-role="logo"><svg-icon name="c"></svg-icon></span>\n'
+                '<p style="color:#ff00ff">x</p>\n<svg><path/></svg>\n')
+        self.assertIn("color.off-palette", self.rules(html))
+        html2 = '<span data-brand-role="logo"><svg fill="#117ACA">\n<p style="color:#ff00ff">x</p>\n<svg><path/></svg>\n'
+        self.assertIn("color.off-palette", self.rules(html2))
+
+    def test_a_marked_svg_inside_an_unmarked_one(self):
+        inner = self.SVG.replace("<svg ", '<svg data-brand-role="logo" ')
+        self.assertIn("color.off-palette", self.rules(f'<svg fill="#ff00ff">{inner}</svg>\n'))
+        self.assertEqual(self.rules(f'<svg>{inner}</svg>\n'), [])
+
+    def test_a_void_tag_before_an_svg_is_not_its_wrapper(self):
+        self.assertIn("color.off-palette", self.rules(f'<img data-brand-role="logo" src="a.png">{self.SVG}\n'))
+
+    def test_line_numbers_survive_unusual_whitespace_in_a_mark(self):
+        mark = '<svg data-brand-role="logo"><title>A\u2028B</title><path fill="#117ACA"/></svg>'
+        f = self.root / "p.html"
+        f.write_text(f'{mark}\n<p>x</p>\n<p style="color:#ff00ff">y</p>\n')
+        lines = [x["line"] for x in self.bp.lint([str(f)], "acme")["findings"] if x["rule"] == "color.off-palette"]
+        # one finding, on the line every other rule numbers it with (the linter counts lines as splitlines does)
+        want = next(i for i, l in enumerate(f.read_text().splitlines(), 1) if "#ff00ff" in l)
+        self.assertEqual(lines, [want])
+
+
+if __name__ == "__main__":
+    unittest.main()

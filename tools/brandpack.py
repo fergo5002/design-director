@@ -506,23 +506,29 @@ class _Rules:
         return self.allowed.get(h) or self.extended.get(h)
 
 
-LOGO_MARK = re.compile(r"""data-brand-role\s*=\s*["'](logo|mark|source)["']"""
-                       r"""|\b(class|id)\s*=\s*["'][^"']*\blogo\b|aria-label\s*=\s*["'][^"']*\blogo\b""", re.I)
-LAST_TAG = re.compile(r"<[A-Za-z][^<>]*>\s*\Z")
+# A third party's mark is declared, never guessed: a class or a label named "logo" exempted page
+# content in review (a logo wall, a "Change logo" button, the brand's own header logo).
+LOGO_MARK = re.compile(r"""data-brand-role\s*=\s*["'](logo|mark|source)["']""", re.I)
+# The tag directly before an svg is its wrapper only when it is an opening tag that can hold children.
+LAST_TAG = re.compile(r"<(?!/)(?!(?:img|br|hr|input|meta|link|source|area|col|embed|wbr|track|param)\b)"
+                      r"[A-Za-z][^<>]*(?<!/)>\s*\Z", re.I)
+# One svg element with no svg inside it: a custom <svg-icon> is not an svg, an unclosed svg cannot run
+# on to a later one, and a marked svg nested in an unmarked one is matched on its own.
+SVG_BLOCK = re.compile(r"<svg(?=[\s/>])[^>]*>(?:(?!<svg[\s/>]).)*?</svg\s*>", re.S | re.I)
 
 
 def _mask_logos(text: str) -> str:
-    """text with every inline SVG that is a third party's mark blanked (newlines kept), for the colour
-    scan only: a real logo keeps its own colours, and the house rules ask for real marks. An SVG is a
-    mark when it, or the tag that directly wraps it, says so: data-brand-role="logo", a "logo" class
-    or id, or an aria-label naming a logo."""
+    """text with every inline svg declared as a third party's mark blanked, for the colour scan only:
+    a real logo keeps its own colours, and the house rules ask for real marks. The svg, or the opening
+    tag that directly wraps it, carries data-brand-role="logo" (or "mark", "source"). Only visible
+    characters are blanked, so every kind of line break stays and line numbers hold."""
     def blank(m):
-        before = LAST_TAG.search(text[max(0, m.start() - 300):m.start()])
         opening = m.group(0)[:m.group(0).find(">") + 1]
+        before = LAST_TAG.search(text[max(0, m.start() - 300):m.start()])
         if LOGO_MARK.search(opening) or (before and LOGO_MARK.search(before.group(0))):
-            return re.sub(r"[^\n]", " ", m.group(0))
+            return re.sub(r"\S", " ", m.group(0))
         return m.group(0)
-    return re.sub(r"<svg\b[^>]*>.*?</svg\s*>", blank, text, flags=re.S | re.I)
+    return SVG_BLOCK.sub(blank, text)
 
 
 def _lint_file(path: pathlib.Path, text: str, R: _Rules, shown: str) -> list:
