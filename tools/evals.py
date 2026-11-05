@@ -513,7 +513,7 @@ def g_cost_max(spec, ctx):
     if not ctx.trace.result or ctx.trace.result.get("total_cost_usd") is None:
         raise _CouldNotRun("no result event with total_cost_usd (the run did not finish)")
     cost, limit = float(ctx.trace.result["total_cost_usd"]), float(spec.get("max_usd", 0))
-    return cost <= limit, f"${cost:.2f} (max ${limit:.2f})"
+    return cost <= limit, f"{_money(cost)} (max {_money(limit)})"
 
 
 def g_isolation(spec, ctx):
@@ -704,7 +704,9 @@ def _grade_record(rec: dict, case: dict, d: pathlib.Path, trace: Trace = None) -
 # ------------------------------------------------------------------ reporting
 
 def _money(x) -> str:
-    return "?" if x is None else f"${float(x):.2f}"
+    if x is None:
+        return "?"
+    return f"${float(x):.4f}" if 0 < float(x) < 0.01 else f"${float(x):.2f}"
 
 
 def render_report(results: dict) -> str:
@@ -740,7 +742,7 @@ def render_report(results: dict) -> str:
         cost = sum(float(r["cost_usd"]) for r in mine if r.get("cost_usd") is not None)
         unknown = any(r.get("cost_usd") is None for r in mine)
         out.append(f"| {a} | {sum(r['passed'] for r in mine)}/{total} | {sum(r['failed'] for r in mine)} | "
-                   f"{sum(r['errors'] for r in mine)} | {green}/{len(mine)} | ${cost:.2f}{' + unknown' if unknown else ''} | "
+                   f"{sum(r['errors'] for r in mine)} | {green}/{len(mine)} | {_money(cost)}{' + unknown' if unknown else ''} | "
                    f"{sum(r.get('wall_s', 0) for r in mine) / 60:.1f} |")
     return "\n".join(out) + "\n"
 

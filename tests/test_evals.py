@@ -476,8 +476,8 @@ class Runner(unittest.TestCase):
         report = (run / "report.md").read_text()
         self.assertIn("good", report)
         self.assertIn("questions-max", report)
-        self.assertNotIn("—", report)
-        self.assertNotIn("–", report)
+        self.assertNotIn("\u2014", report)
+        self.assertNotIn("\u2013", report)
 
     def test_the_launch_is_isolated_and_limited(self):
         self.call("run", *self.arm_args("good"), "--run-id", "r2")

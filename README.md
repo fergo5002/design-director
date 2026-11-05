@@ -143,6 +143,7 @@ avoid, and how it was verified.
 | `ddr fonts` | Download, subset and inline a webfont for sandboxed pages. |
 | `ddr mcp` | Recommended MCP servers by tier, with setup for Claude Code, Codex and Cursor. |
 | `ddr radar` | What changed in the tools you depend on, dead links, and new design MCPs and skills to look at. |
+| `ddr eval run --arm old=<dir> --arm new=<dir>` | Run two versions of a skill headless on the same real briefs and grade outputs and transcripts with counted checks, no taste judge. `ddr eval sheet` puts the arms side by side for a person. See [docs/evals.md](docs/evals.md). |
 | `ddr doctor` / `ddr uninstall` | Check the install and what competes with it; remove exactly what install added. |
 
 ## Taste without a house style
