@@ -320,6 +320,26 @@ class Render(Base):
         self.assertEqual(self.step(r, "render")["errors"], 1)
         self.assertTrue(r["rendered"])
 
+    def test_render_warnings_and_errors_keep_their_severity(self):
+        self.render_rc = 1
+        self.render["exit"] = 1
+        self.render["findings"] = [
+            {"severity": "error", "rule": "render.tap-target", "message": "2+ tap targets under 24px"},
+            {"severity": "warn", "rule": "render.tap-target-44", "message": "3+ tap targets under 44px"}]
+        rc, r, _ = self.run_gate()
+        s = self.step(r, "render")
+        self.assertEqual((s["errors"], s["warnings"]), (1, 1))
+        rep = json.loads((self.proj / s["report"]).read_text())
+        self.assertEqual({f["rule"]: f["severity"] for f in rep["findings"]},
+                         {"render.tap-target": "error", "render.tap-target-44": "warn"})
+
+    def test_render_warnings_alone_pass(self):
+        self.render["findings"] = [{"severity": "warn", "rule": "render.tap-target-44", "message": "under 44px"}]
+        rc, r, _ = self.run_gate()
+        s = self.step(r, "render")
+        self.assertEqual((s["exit"], s["warnings"]), (0, 1))
+        self.assertEqual(rc, 0)
+
     def test_viewports_flag(self):
         self.render = render_report(viewports=["desktop", "phone"])
         rc, r, _ = self.run_gate("--viewports", "desktop,phone")

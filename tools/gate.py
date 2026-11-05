@@ -437,13 +437,22 @@ def _write_json(path, data):
     os.replace(tmp, path)
 
 
+def _where(f):
+    file, line = f.get("file"), f.get("line")
+    if file and line:
+        return f" {file}:{line}"
+    if file and file not in f.get("message", ""):
+        return f" {file}"
+    return ""
+
+
 def _report_md(receipt, steps):
     L = [f"# Gate {receipt['run_id']}", "", f"Verdict: **{receipt['verdict']}** (exit {receipt['exit']})", ""]
     for s in steps:
         state = f"skipped ({s['skipped']})" if s["skipped"] else f"exit {s['exit']}, {s['errors']} errors, {s['warnings']} warnings"
         L.append(f"- {s['name']}: {state}")
         for f in s["findings"][:20]:
-            where = f" {f['file']}:{f.get('line', '')}" if f.get("file") else ""
+            where = _where(f)
             L.append(f"  - {f['severity']} {f['rule']}{where}: {f['message']}")
     L += ["", "A pass means these checks found nothing. It says nothing about whether the design is good:",
           "look at the shots, then score it with the design-review rubric and `ddr review record`.", ""]
@@ -505,7 +514,7 @@ def run(args):
         else:
             print(f"  {s['name']:9} exit {s['exit']}    {s['errors']} errors, {s['warnings']} warnings")
         for f in s["findings"][:6]:
-            where = f" {f['file']}:{f.get('line', '')}" if f.get("file") else ""
+            where = _where(f)
             print(f"      {f['severity']:5} {f['rule']}{where} {f['message']}")
         if len(s["findings"]) > 6:
             print(f"      ... {len(s['findings']) - 6} more in {s['report']}")
