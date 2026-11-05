@@ -1,0 +1,13 @@
+# A small worked brand. `ddr brand init <slug>` copies this folder and sets the slug and name.
+slug = "example"
+name = "Example Studio"
+status = "active"
+extends = "house"
+domains = []
+theme = "light-only"
+summary = "A small print studio: warm paper, dark ink, one rust accent, square corners."
+
+[sources]
+repo = ""
+tokens_from = ["src/styles/tokens.css"]
+site = "https://example.com"

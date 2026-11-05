@@ -24,3 +24,19 @@ jobs:
           git diff --exit-code library/SOURCES.md || (echo "Run: python tools/ddr.py sources render" && exit 1)
       - name: The repo passes its own lint
         run: python tools/ddr.py lint skills templates
+  browser:
+    # The Node half: screenshots, contact sheets, crops, the gate's real render and the eval
+    # graders that run in Chromium. The check job above skips them, having no playwright.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Install playwright and Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: python -m unittest tests.test_shots tests.test_evals tests.test_gate tests.test_review_findings tests.test_research_tools -v

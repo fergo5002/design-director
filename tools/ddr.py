@@ -9,17 +9,34 @@
     python tools/ddr.py sources search "editorial type pairings"
     python tools/ddr.py taste brief
     python tools/ddr.py domain match "a booking site for a sauna"   # where you stand, and how sure
-    python tools/ddr.py lint src/
+    python tools/ddr.py lint src/ [--json]          # exit 0 clean, 1 findings, 2 could not look
+    python tools/ddr.py gate run --src src/ --file index.html [--copy copy.txt] [--brand acme]
+    python tools/ddr.py gate verify --require-review   # is the receipt current, passing and reviewed
+    python tools/ddr.py gate waive --reason "<why>" --src src/
+    python tools/ddr.py review record --run latest --json review.json
+    python tools/ddr.py review show
     python tools/ddr.py shots https://localhost:3000 --full
     python tools/ddr.py teardown https://example.com --into independent-stays   # capture and measure a reference
     python tools/ddr.py sheet --domain independent-stays --with my-fold.png      # yours beside the best, same size
+    python tools/ddr.py sheet --images a.png b.png --labels "Before,After" --cols 2 --out sheet.png
+    python tools/ddr.py crop before.png after.png --box 0,0,400,300 --scale 2 --out pair.png
     python tools/ddr.py palette ramp --hue 168 --chroma 0.02:0.05 --light 0.25:0.95 --steps 9
     python tools/ddr.py fonts --css "https://api.fontshare.com/v2/css?f[]=switzer@400,600" --family Switzer --out switzer.css
     python tools/ddr.py history https://example.com    # how old the design is, from the Wayback Machine
     python tools/ddr.py mcp --research                  # the servers that find, look at and measure references
     python tools/ddr.py radar
+    python tools/ddr.py brand show acme                 # a brand pack: palette, fonts, bans, voice, graphic language
+    python tools/ddr.py brand lint src/ --brand acme    # check work against the pack (exit 0, 1 findings, 2 could not run)
+    python tools/ddr.py contract add --kind copy --text "Hero" --source "client 2026-11-04" --exact "..."
+    python tools/ddr.py contract check --phase final    # every requirement closed with evidence
+    python tools/ddr.py claims check --src src/         # every claim on the page checked or read
+    python tools/ddr.py notes add fintech "what happened" --evidence "where it shows"
+    python tools/ddr.py notes promote --apply           # strong notes into a dossier's Proposed guidance
+    python tools/ddr.py looks pick --look b --why "the person's reason" --others a,c --domain fintech
+    python tools/ddr.py eval run --arm old=<skill dir> --arm new=skills/design-director --dry-run   # compare two versions on real briefs
 
-Standard library only (Python 3.9+). `shots` needs Node and `npm install` in this repo.
+Standard library only (Python 3.9+). `shots`, `sheet`, `crop` and the gate's render step need
+Node and `npm install` in this repo.
 """
 from __future__ import annotations
 
@@ -290,11 +307,12 @@ def uninstall(argv):
 
 
 def init(argv):
-    """Scaffold .design/ in the current project: house taste, reference ledger, lint config."""
+    """Scaffold .design/ in the current project: house taste, reference ledger, lint config, the brief."""
     target = pathlib.Path.cwd() / ".design"
     target.mkdir(exist_ok=True)
-    for name in ("taste.md", "references.md", "lint.toml"):
-        dst = target / name
+    (target / "brief").mkdir(exist_ok=True)
+    for name, dst in [(n, target / n) for n in ("taste.md", "references.md", "lint.toml")] + \
+            [("brief.md", target / "brief" / "BRIEF.md")]:
         if dst.exists():
             print(f"kept    {dst}")
         else:
@@ -561,9 +579,23 @@ def main(argv=None):
         return _run_py("radar", rest)
     if cmd == "history":
         return _run_py("history", rest)
+    if cmd == "brand":
+        return _run_py("brandpack", rest)
+    if cmd in ("contract", "claims", "notes", "looks"):
+        return _run_py(cmd, rest)
+    if cmd == "eval":
+        return _run_py("evals", rest)
     if cmd in ("palette", "fonts", "routes"):
         script = {"palette": "palette.py", "fonts": "inline_fonts.py", "routes": "check_routes.py"}[cmd]
         return subprocess.call([sys.executable, str(TOOLS / script), *rest])
+    if cmd == "gate":
+        return _run_py("gate", rest)
+    if cmd == "review":
+        return _run_py("review", rest)
+    if cmd == "crop":
+        if not _which("node"):
+            print("crop needs Node.js 18+ and `npm install` in the design-director repo"); return 2
+        return subprocess.call(["node", str(TOOLS / "crop.mjs"), *rest], cwd=os.getcwd())
     if cmd == "teardown":
         return teardown(rest)
     if cmd == "sheet":

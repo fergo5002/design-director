@@ -5,18 +5,21 @@
 //
 //   node tools/sheet.mjs a.png b.png c.png [--labels "Yours,Best,Runner-up"] [--cols 3]
 //                        [--width 480] [--crop 900] [--out sheet.png]
+//   node tools/sheet.mjs --images a.png b.png [--labels "a,b"] [--cols 3] [--out sheet.png]
 //
 // --crop keeps only the top N pixels of each (scaled) image, so full-page captures can sit
-// beside folds. Images are embedded as data, so nothing is fetched.
+// beside folds. Images are embedded as data, so nothing is fetched. Exit 2 when an image is
+// missing or playwright is not installed.
 import fs from 'node:fs';
 import path from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const VALUED = ['--labels', '--cols', '--width', '--crop', '--out', '--title'];
+// --images takes every path up to the next flag; bare paths anywhere also count.
 const imgs = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 if (!imgs.length) {
-  console.error('usage: node tools/sheet.mjs <png...> [--labels "A,B"] [--cols 3] [--width 480] [--crop 900] [--out sheet.png]');
+  console.error('usage: node tools/sheet.mjs [--images] <png...> [--labels "A,B"] [--cols 3] [--width 480] [--crop 900] [--out sheet.png]');
   process.exit(2);
 }
 const missing = imgs.filter((f) => !fs.existsSync(f));

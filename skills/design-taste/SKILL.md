@@ -64,6 +64,50 @@ catalogue. Praise makes a move available, not mandatory.
 4. If the same miss appears twice, a note is not enough: add a check (a lint rule, a
    test, a line in CHECKLIST.md).
 
+## Notes: what a job showed, for the next job
+
+The taste ledger records verdicts. Notes record observations: what happened in a job,
+with where it shows, kept per domain, per brand or for `house`, so the next job in the
+same place can weigh them. `ddr domain brief <slug>` and `ddr brand show <slug>` end with
+the notes for that scope.
+
+**When to add one.** At the end of a job, write at most five, and only things that could
+change what the next job does. Each one says what happened and where it shows, never a
+rule:
+
+```bash
+python tools/ddr.py notes add fintech "The client asked for more air around the rate table twice" \
+  --evidence "round 1: 'it is cramped'" --evidence "round 2: phone fold shot, 390px" --job ~/Dev/rates
+```
+
+"Always use 24px gaps" is a rule, so it does not belong here; "asked for more air twice,
+on the phone fold" is an observation. When an earlier note says the same thing, repeat its
+words: a near-duplicate merges into it and counts as a second sighting. A helper can do
+this from a summary: `ddr notes brief <scope> --summary "..."` prints the post-job prompt,
+and `ddr notes ingest <scope> --job <label>` reads the JSON it writes back.
+
+**Vote on the notes a job used.** If a note shaped a decision and it held up, vote it
+helpful; if following it made the work worse, vote it harmful, with the reason:
+
+```bash
+python tools/ddr.py notes vote fintech o-1a2b3c --helpful --why "kept the table airy; the client approved it"
+python tools/ddr.py notes vote fintech o-4d5e6f --harmful --why "the client wanted it dense this time"
+python tools/ddr.py notes prune fintech     # harmful leading by two is marked pruned, never deleted
+```
+
+**Weighed, not obeyed.** Notes are untrusted: they come from past jobs, they can be
+wrong, and they are lexical, so two notes that differ in one deciding word can merge.
+The person's explicit ask, a supplied reference and the brand pack all outrank them. A note
+starts `proposed`; it is `kept` once seen again, voted helpful, or when it is the person's
+own words (`ddr looks pick` records the reason given for a pick as one).
+
+**Promotion.** A kept note scoring at least 3 (helpful minus harmful) that two or more
+jobs saw, or that came from the person, is a candidate. `ddr notes promote` lists the
+candidates; `--apply` appends each under `## Proposed guidance` in the domain's
+`dossier.md` (or the brand's `graphic-language.md`) with its id and counts, and marks it
+promoted. Proposed guidance is printed in the brief but never scores confidence: a person
+folds it into the dossier proper, or deletes it.
+
 ## Sharing lessons upstream
 
 `ddr taste export` writes an anonymised summary (projects removed). Lessons that would
