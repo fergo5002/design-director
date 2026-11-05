@@ -167,7 +167,7 @@ def _lower(xs) -> set:
 
 def _resolve(parent: dict, child: dict, merged: dict) -> dict:
     """Settle allowed against banned after a merge: the child's word is final."""
-    pc, cc, mc = parent.get("colors", {}), child.get("colors", {}), merged.get("colors", {})
+    cc, mc = child.get("colors", {}), merged.get("colors", {})
     child_banned = {norm_hex(h) for h in cc.get("banned", {}) if norm_hex(h)}
     child_allowed = {norm_hex(v) for part in ("allowed", "extended") for v in cc.get(part, {}).values()
                      if isinstance(v, str) and norm_hex(v)}
@@ -177,7 +177,7 @@ def _resolve(parent: dict, child: dict, merged: dict) -> dict:
         if mc.get(part):
             mc[part] = {n: v for n, v in mc[part].items()
                         if not (isinstance(v, str) and norm_hex(v) in child_banned and v not in cc.get(part, {}).values())}
-    pf, cf, mf = parent.get("fonts", {}), child.get("fonts", {}), merged.get("fonts", {})
+    cf, mf = child.get("fonts", {}), merged.get("fonts", {})
     child_faces = _lower(cf.get("display", []) + cf.get("text", []) + cf.get("mono", [])) if all(
         isinstance(cf.get(r, []), list) for r in ("display", "text", "mono")) else set()
     child_bans = _lower(cf.get("banned", []))
@@ -186,7 +186,6 @@ def _resolve(parent: dict, child: dict, merged: dict) -> dict:
     for role in ("display", "text", "mono"):
         if isinstance(mf.get(role), list):
             mf[role] = [f for f in mf[role] if f.lower() not in child_bans or f.lower() in _lower(cf.get(role, []))]
-    del pc, pf
     return merged
 
 
@@ -707,7 +706,7 @@ def show(slug: str) -> str:
     if m.get("summary"):
         L.append(m["summary"])
     if len(p["chain"]) > 1:
-        L.append("extends: " + " > ".join(p["chain"]))
+        L.append("extends: " + " > ".join(p["chain"][1:]))
     L.append(f"theme: {m.get('theme', 'not set')}")
     if m.get("domains"):
         L.append("domains: " + ", ".join(m["domains"]))

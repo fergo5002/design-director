@@ -18,6 +18,14 @@
     python tools/ddr.py history https://example.com    # how old the design is, from the Wayback Machine
     python tools/ddr.py mcp --research                  # the servers that find, look at and measure references
     python tools/ddr.py radar
+    python tools/ddr.py brand show acme                 # a brand pack: palette, fonts, bans, voice, graphic language
+    python tools/ddr.py brand lint src/ --brand acme    # check work against the pack (exit 0, 1 findings, 2 could not run)
+    python tools/ddr.py contract add --kind copy --text "Hero" --source "Fergus 2026-11-04" --exact "..."
+    python tools/ddr.py contract check --phase final    # every requirement closed with evidence
+    python tools/ddr.py claims check --src src/         # every claim on the page checked or read
+    python tools/ddr.py notes add fintech "what happened" --evidence "where it shows"
+    python tools/ddr.py notes promote --apply           # strong notes into a dossier's Proposed guidance
+    python tools/ddr.py looks pick --look b --why "the person's reason" --others a,c --domain fintech
 
 Standard library only (Python 3.9+). `shots` needs Node and `npm install` in this repo.
 """
@@ -290,11 +298,12 @@ def uninstall(argv):
 
 
 def init(argv):
-    """Scaffold .design/ in the current project: house taste, reference ledger, lint config."""
+    """Scaffold .design/ in the current project: house taste, reference ledger, lint config, the brief."""
     target = pathlib.Path.cwd() / ".design"
     target.mkdir(exist_ok=True)
-    for name in ("taste.md", "references.md", "lint.toml"):
-        dst = target / name
+    (target / "brief").mkdir(exist_ok=True)
+    for name, dst in [(n, target / n) for n in ("taste.md", "references.md", "lint.toml")] + \
+            [("brief.md", target / "brief" / "BRIEF.md")]:
         if dst.exists():
             print(f"kept    {dst}")
         else:
@@ -561,6 +570,10 @@ def main(argv=None):
         return _run_py("radar", rest)
     if cmd == "history":
         return _run_py("history", rest)
+    if cmd == "brand":
+        return _run_py("brandpack", rest)
+    if cmd in ("contract", "claims", "notes", "looks"):
+        return _run_py(cmd, rest)
     if cmd in ("palette", "fonts", "routes"):
         script = {"palette": "palette.py", "fonts": "inline_fonts.py", "routes": "check_routes.py"}[cmd]
         return subprocess.call([sys.executable, str(TOOLS / script), *rest])
