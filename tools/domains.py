@@ -77,6 +77,8 @@ SECTION_PROMPTS = {
     "Language": "Type, colour, imagery, voice and motion that belong to this world, and why.",
     "Open questions": "What you still do not know, and what would answer it.",
 }
+# Sections a person or `ddr notes promote` adds; the brief prints them, confidence ignores them.
+BRIEF_EXTRA = ("Lessons", "Proposed guidance")
 HALF_LIFE = 365          # days, for references and ledger events
 STALE_DAYS = 365
 STAKES = {"low": 35, "medium": 55, "high": 70}
@@ -951,6 +953,16 @@ def brief(dom: dict, today=None, n_refs: int = 8) -> str:
             L.append(f"- {r['slug']}" + (f" ({rc['score']}/100)" if rc else "") + (f": {r['how']}" if r.get("how") else ""))
     if c["gaps"]:
         L += ["", "## What would raise confidence"] + [f"- {g}" for g in c["gaps"][:8]]
+    for s in BRIEF_EXTRA:   # lessons relocated here and promoted notes, in full; neither scores
+        if secs.get(s):
+            L += ["", f"## {s}", secs[s]]
+    try:
+        import notes
+        rendered = notes.render(dom["slug"])
+    except Exception as e:  # notes must never block a brief
+        rendered = f"(notes unavailable: {type(e).__name__})"
+    if rendered:
+        L += ["", rendered]
     return "\n".join(L)
 
 
