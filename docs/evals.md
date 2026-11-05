@@ -10,6 +10,8 @@ ddr eval list                                         # the cases in $DDR_HOME/e
 ddr eval run --arm old=~/skills/old/design-director \
              --arm new=skills/design-director --dry-run     # the plan and the money ceiling
 ddr eval run --arm old=... --arm new=... --jobs 2           # spend it
+ddr eval run --arm before=git:~/Brain@design-director-before-v2:agent/skills/design-director \
+             --arm after=~/Brain/agent/skills/design-director   # a tagged baseline against the working copy
 ddr eval report latest                                # report.md again, or --json
 ddr eval report latest --regrade                      # grade stored runs again after editing graders, free
 ddr eval sheet latest                                 # one contact sheet per case, arms side by side
@@ -18,6 +20,15 @@ ddr eval sheet latest                                 # one contact sheet per ca
 `run` exits 0 when every grader passed, 1 when any failed or a run timed out, 2 when a
 grader or a run could not look. It refuses to start when the summed budget ceiling (each
 case's `budget_usd` times the number of arms) is over `--max-total-usd` (default 25).
+
+## Arms
+
+An arm is `name=<skill directory>` (a folder holding `SKILL.md`) or
+`name=git:<repo>@<ref>:<path>`. A git arm is checked before anything is spent (the ref must be
+a commit and `<path>/SKILL.md` must exist in it) and then `git archive`d into
+`<run>/arms/<name>/`, so the baseline is exactly that commit, whatever the working copy holds.
+`results.json` records each arm's path, the git repo, ref and full commit, and a hash of the
+files the run saw.
 
 ## Writing a case
 
@@ -35,7 +46,8 @@ budget_usd = 3                       # default 4; passed to --max-budget-usd
 timeout_min = 15                     # default 25; the run is killed after this
 # model = "opus"                     # optional; `run --model` overrides every case
 # append_system_prompt_file = "extra.md"   # optional; its text goes to --append-system-prompt
-# main_html = "index.html"           # optional; the page the contact sheet renders
+# main_html = "out/index.html"       # optional; the page the contact sheet renders
+# preamble = false                   # optional; leave the isolation preamble off this case
 
 [[grader]]
 type = "unchanged"
@@ -80,14 +92,34 @@ transcript, a bad regex, a fixture without the file to compare. An error is neve
 | `cost-max` | `max_usd` | the result event's `total_cost_usd` is at most `max_usd`; no result event is an error |
 | `isolation` | none | the init event lists exactly one design-director skill, `dd:design-director`, and no hook fired. Added to every case automatically |
 
-`file` defaults to the first `*.html` in the workdir, shallowest first, `index.html` first at
-equal depth. Globs never look inside `.git` or `node_modules`. The Chromium graders need
+`file` defaults to the first `*.html` in the workdir: anything under `out/` first, then
+shallowest first, `index.html` first at equal depth. `file-exists`, `text-present`,
+`text-absent`, `lint-clean` and `brand-lint-clean` also take `root = "ddr_home"`, which points
+their glob at the run's private copy of `$DDR_HOME` instead of the workdir, so a case can
+check what the agent recorded (a note, a domain log line, a taste event, a gate waiver). Globs never look inside `.git` or `node_modules`. The Chromium graders need
 `npm install` in this repo and run `tools/eval_render.mjs`; pages load from file URLs with
 reduced motion, so a probe reads the finished state.
 
 The trace ideas (order of tool calls, questions before acting, cost) are ported and
 simplified from LangChain's design-agent (Apache License 2.0),
 `src/design_agent/evals/graders.py` and `trace.py`.
+
+## Isolation from real data
+
+Every prompt starts with this preamble unless the case sets `preamble = false` or the run is
+given `--no-preamble`:
+
+> This is an evaluation run in an isolated folder. Fergus is not available: do not ask
+> questions, decide and say what you decided. Do not write to the vault or the brain, do not
+> commit, push, deploy or publish. Save every deliverable under ./out/.
+
+Each run (one case, one arm) gets its own copy of the real `$DDR_HOME` at
+`<case>/<arm>/ddr_home/`: `domains/`, `brands/`, `notes/` and `taste.jsonl`, without `evals/`
+or any `shots/` folder. The child process gets `DDR_HOME` pointed at that copy, so
+`ddr domain log`, `ddr notes ingest`, `ddr taste` and `ddr gate waive` write there and the copy
+stays in the run folder for a grader or a person to read. This guards the `ddr` tools only.
+An agent that writes to `~/Brain` or `~/.design-director` by absolute path is stopped by the
+preamble and the deny list, not by the copy.
 
 ## What a run looks like
 
@@ -98,6 +130,8 @@ $DDR_HOME/evals/runs/<run_id>/
   <case>/sheet.png        after `ddr eval sheet`
   <case>/<arm>/workdir/   the fixture, then whatever the agent made (its own git repository)
   <case>/<arm>/plugin/    the frozen copy of the arm, wrapped as a plugin
+  <case>/<arm>/ddr_home/  the run's private copy of $DDR_HOME, with whatever the agent recorded
+  arms/<name>/            a git arm, archived at its commit
   <case>/<arm>/transcript.jsonl   stream-json, one event per line
   <case>/<arm>/stderr.txt
   <case>/<arm>/grades.json
@@ -115,11 +149,13 @@ $DDR_CLAUDE_BIN -p <prompt> --output-format stream-json --verbose --include-hook
   --strict-mcp-config --no-session-persistence
   --tools Read,Write,Edit,Glob,Grep,Bash,Skill --allowedTools Read,Write,Edit,Glob,Grep,Bash,Skill
   [--model <model>] [--append-system-prompt <text>]
-  --disallowedTools "Bash(git push:*)" "Bash(vercel:*)" "Bash(wrangler:*)" "Bash(railway:*)" "Bash(netlify:*)"
-                    "Bash(gh:*)" (and the npx forms) <mail and messaging MCP servers> WebFetch WebSearch
+  --disallowedTools "Bash(git push:*)" "Bash(git commit:*)" "Bash(brain:*)" "Bash(vercel:*)" "Bash(wrangler:*)"
+                    "Bash(railway:*)" "Bash(netlify:*)" "Bash(gh:*)" (and the npx forms) "mcp__*"
+                    <mail and messaging MCP servers by name> WebFetch WebSearch
 ```
 
-stdin is `/dev/null`, the process gets its own process group, and on timeout the group gets
+The child's environment is the caller's with `DDR_HOME` replaced by the run's copy. stdin is
+`/dev/null`, the process gets its own process group, and on timeout the group gets
 SIGTERM then SIGKILL. Permissions stay in the default mode; nothing uses bypassPermissions.
 Set `DDR_CLAUDE_BIN` to the real binary (on Fergus's Mac `~/.local/bin/claude`): a plain
 `claude` on PATH may be a wrapper that adds hooks, and the `isolation` grader will then fail.
@@ -183,6 +219,13 @@ Hook events are `system` with `subtype` `hook_started` / `hook_response` and `ho
 (`tool_use_id`, `content`, `is_error`). The last event is `{"type": "result"}` with `subtype`,
 `is_error`, `total_cost_usd`, `num_turns`, `duration_ms`, `duration_api_ms`, `stop_reason`,
 `permission_denials`, `usage` and `modelUsage`.
+
+A second smoke run (`e2e2`) with the preamble, the extended deny list (`Bash(git commit:*)`,
+`Bash(brain:*)`, `mcp__*`) and a third arm taken as `git:<this repo>@main:skills/design-director`
+finished on all three arms with an empty stderr, `isolation` passing, the page written to
+`out/index.html` and each run's `ddr_home` copy in place. That shows the CLI accepts those
+deny entries; no run tried `git commit` or `brain`, so the denials themselves were only
+observed for `git push` (probe 7).
 
 Not verified: that `**/CLAUDE.md` excludes a CLAUDE.md inside the workdir itself (the probes
 only had ancestors), that the `mcp__<server>` deny entries work (with `--strict-mcp-config` no

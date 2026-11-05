@@ -5,6 +5,7 @@ It reads the arm's SKILL.md from the `--plugin-dir` it was given, finds a line
 `fake-scenario: <name>`, and plays `$FAKE_CLAUDE_SCENARIOS/<name>.json`:
 
     {"files": {"index.html": "..."},      written into the cwd before the events
+     "home_files": {"notes/house.jsonl": "..."},   appended under $DDR_HOME
      "events": [ ...stream-json events... ],
      "sleep": 0, "exit": 0, "stderr": ""}
 
@@ -27,7 +28,7 @@ if argv[:1] == ["--version"]:
 log = os.environ.get("FAKE_CLAUDE_ARGV_LOG")
 if log:
     with open(log, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"argv": argv, "cwd": os.getcwd()}) + "\n")
+        f.write(json.dumps({"argv": argv, "cwd": os.getcwd(), "ddr_home": os.environ.get("DDR_HOME")}) + "\n")
 
 
 def opt(name):
@@ -51,6 +52,13 @@ data = {"events": []}
 scen_dir = os.environ.get("FAKE_CLAUDE_SCENARIOS")
 if scen_dir and (pathlib.Path(scen_dir) / f"{scenario}.json").exists():
     data = json.loads((pathlib.Path(scen_dir) / f"{scenario}.json").read_text(encoding="utf-8"))
+
+# what an agent would record through ddr (domain log, notes, taste): into whatever DDR_HOME it was given
+for rel, text in data.get("home_files", {}).items():
+    p = pathlib.Path(os.environ["DDR_HOME"]) / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, "a", encoding="utf-8") as f:
+        f.write(text)
 
 for rel, text in data.get("files", {}).items():
     p = pathlib.Path(rel)

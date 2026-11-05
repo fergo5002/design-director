@@ -32,10 +32,12 @@ import os
 import pathlib
 import re
 import secrets
+import io
 import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import time
 from dataclasses import asdict, dataclass, field
 
@@ -47,9 +49,10 @@ sys.path.insert(0, str(TOOLS))
 # (print mode cannot ask anyone), --disallowedTools denies the rest even inside Bash.
 ALLOWED = "Read,Write,Edit,Glob,Grep,Bash,Skill"
 DENIED = [
-    "Bash(git push:*)", "Bash(vercel:*)", "Bash(npx vercel:*)", "Bash(wrangler:*)", "Bash(npx wrangler:*)",
+    "Bash(git push:*)", "Bash(git commit:*)", "Bash(brain:*)",
+    "Bash(vercel:*)", "Bash(npx vercel:*)", "Bash(wrangler:*)", "Bash(npx wrangler:*)",
     "Bash(railway:*)", "Bash(netlify:*)", "Bash(npx netlify:*)", "Bash(gh:*)",
-    "mcp__whatsapp", "mcp__workspace-mcp-personal", "mcp__workspace-mcp-arbourvilla",
+    "mcp__*", "mcp__whatsapp", "mcp__workspace-mcp-personal", "mcp__workspace-mcp-arbourvilla",
     "mcp__workspace-mcp-tighsauna", "mcp__workspace-mcp-tcd", "mcp__claude_ai_Gmail", "mcp__claude_ai_Slack",
     "WebFetch", "WebSearch",
 ]
@@ -63,6 +66,13 @@ SKILL = "design-director"
 WRITES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 SKIP = {".git", "node_modules"}
 MAX_JOBS = 3
+# Put in front of every prompt unless the case says `preamble = false` or run gets --no-preamble.
+PREAMBLE = ("This is an evaluation run in an isolated folder. Fergus is not available: do not ask questions, "
+            "decide and say what you decided. Do not write to the vault or the brain, do not commit, push, "
+            "deploy or publish. Save every deliverable under ./out/.")
+# What a run's private copy of $DDR_HOME carries. evals/ and every shots/ folder stay behind.
+HOME_COPY = ("domains", "brands", "notes", "taste.jsonl")
+GIT_ARM = re.compile(r"git:(?P<repo>.+?)@(?P<ref>[^:@\s]+):(?P<path>.*)")
 
 GRADERS = ("file-exists", "text-present", "text-absent", "max-count", "lint-clean", "brand-lint-clean",
            "unchanged", "dom-probe", "trace-order", "trace-present", "trace-absent", "questions-max",
@@ -129,6 +139,7 @@ def load_case(path: pathlib.Path) -> dict:
     if problems:
         raise ValueError("; ".join(problems))
     data["grader"] = graders
+    data["preamble"] = bool(data.get("preamble", True))
     data["dir"] = str(path)
     return data
 
@@ -258,6 +269,19 @@ class Context:
     fixture: pathlib.Path = None
     trace: Trace = None
     case: dict = None
+    ddr_home: pathlib.Path = None     # the run's private copy of $DDR_HOME
+
+
+def _base(spec: dict, ctx: Context) -> pathlib.Path:
+    """Where a file grader looks: the workdir, or with root = "ddr_home" the run's copy of $DDR_HOME."""
+    root = spec.get("root", "workdir")
+    if root == "workdir":
+        return ctx.workdir
+    if root == "ddr_home":
+        if ctx.ddr_home is None:
+            raise _CouldNotRun("this run has no copy of DDR_HOME")
+        return ctx.ddr_home
+    raise _CouldNotRun(f"root must be workdir or ddr_home, not {root!r}")
 
 
 def _files(base: pathlib.Path, pattern: str) -> list:
@@ -272,7 +296,8 @@ def main_html(workdir: pathlib.Path, named: str = "") -> pathlib.Path:
         p = workdir / named
         return p if p.is_file() else None
     found = _files(workdir, "**/*.html") + _files(workdir, "**/*.htm")
-    found.sort(key=lambda p: (len(p.relative_to(workdir).parts), p.name != "index.html", str(p)))
+    found.sort(key=lambda p: (p.relative_to(workdir).parts[0] != "out", len(p.relative_to(workdir).parts),
+                              p.name != "index.html", str(p)))
     return found[0] if found else None
 
 
@@ -330,15 +355,17 @@ class _CouldNotRun(Exception):
 
 
 def g_file_exists(spec, ctx):
-    found = _files(ctx.workdir, spec.get("glob", "**/*"))
+    base = _base(spec, ctx)
+    found = _files(base, spec.get("glob", "**/*"))
     need = int(spec.get("min", 1))
     ok = len(found) >= need
     return ok, f"{len(found)} file(s) match {spec.get('glob')} (need {need})" + (
-        "" if ok or not found else f": {', '.join(_rel(p, ctx.workdir) for p in found[:5])}")
+        "" if ok or not found else f": {', '.join(_rel(p, base) for p in found[:5])}")
 
 
 def _text_hits(spec, ctx):
-    files = _files(ctx.workdir, spec.get("glob", "**/*"))
+    base = _base(spec, ctx)
+    files = _files(base, spec.get("glob", "**/*"))
     if not files:
         return None, files
     try:
@@ -350,9 +377,9 @@ def _text_hits(spec, ctx):
         try:
             text = f.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
-            raise _CouldNotRun(f"cannot read {_rel(f, ctx.workdir)}: {e}")
+            raise _CouldNotRun(f"cannot read {_rel(f, base)}: {e}")
         for m in rx.finditer(text):
-            hits.append(f"{_rel(f, ctx.workdir)}:{text.count(chr(10), 0, m.start()) + 1} {m.group(0)[:60]!r}")
+            hits.append(f"{_rel(f, base)}:{text.count(chr(10), 0, m.start()) + 1} {m.group(0)[:60]!r}")
     return hits, files
 
 
@@ -388,25 +415,27 @@ def g_max_count(spec, ctx):
 
 
 def g_lint_clean(spec, ctx):
+    base = _base(spec, ctx)
     import slop_lint
-    files = _files(ctx.workdir, spec.get("glob", "**/*"))
+    files = _files(base, spec.get("glob", "**/*"))
     files = [f for f in files if f.suffix.lower() in slop_lint.EXTS | slop_lint.MD_EXTS]
     if not files:
         return False, f"no lintable file matches {spec.get('glob', '**/*')}"
     rules = list(spec.get("rules", []))
     found = slop_lint.lint_paths([str(f) for f in files], enable=rules, md=bool(spec.get("md")))
     bad = [f for f in found if (f.rule in rules if rules else f.level == "error")]
-    return not bad, ("; ".join(f"{_rel(pathlib.Path(f.file), ctx.workdir)}:{f.line} {f.rule}" for f in bad[:6])
+    return not bad, ("; ".join(f"{_rel(pathlib.Path(f.file), base)}:{f.line} {f.rule}" for f in bad[:6])
                      if bad else f"{len(files)} file(s) clean of {', '.join(rules) or 'error-level rules'}")
 
 
 def g_brand_lint_clean(spec, ctx):
+    base = _base(spec, ctx)
     try:
         import brandpack
         lint = brandpack.lint
     except (ImportError, AttributeError) as e:
         raise _CouldNotRun(f"brandpack.lint is not available: {e}")
-    files = _files(ctx.workdir, spec.get("glob", "**/*"))
+    files = _files(base, spec.get("glob", "**/*"))
     if not files:
         return False, f"no file matches {spec.get('glob', '**/*')}"
     try:
@@ -589,13 +618,19 @@ def build_plugin(arm_path: pathlib.Path, dest: pathlib.Path) -> pathlib.Path:
     (dest / ".claude-plugin").mkdir(parents=True)
     (dest / ".claude-plugin" / "plugin.json").write_text(json.dumps(
         {"name": PLUGIN, "version": "0.0.0", "description": "design-director eval arm"}, indent=1), encoding="utf-8")
-    shutil.copytree(arm_path, dest / "skills" / SKILL,
+    shutil.copytree(arm_path, dest / "skills" / SKILL, ignore_dangling_symlinks=True,
                     ignore=shutil.ignore_patterns(".git", "node_modules", "__pycache__", ".DS_Store"))
     return dest
 
 
-def build_argv(binary: str, case: dict, plugin: pathlib.Path, model: str = "") -> list:
-    argv = [binary, "-p", case["prompt"],
+def build_prompt(case: dict, preamble: bool = True) -> str:
+    if preamble and case.get("preamble", True):
+        return PREAMBLE + "\n\n" + case["prompt"]
+    return case["prompt"]
+
+
+def build_argv(binary: str, case: dict, plugin: pathlib.Path, model: str = "", preamble: bool = True) -> list:
+    argv = [binary, "-p", build_prompt(case, preamble),
             "--output-format", "stream-json", "--verbose", "--include-hook-events",
             "--max-budget-usd", str(float(case["budget_usd"])),
             "--setting-sources", "local", "--plugin-dir", str(plugin),
@@ -645,7 +680,24 @@ def _kill(p: subprocess.Popen):
         p.wait()
 
 
-def run_one(case: dict, arm: str, arm_path: pathlib.Path, run_root: pathlib.Path, binary: str, model: str = "") -> dict:
+def copy_home(src: pathlib.Path, dest: pathlib.Path) -> pathlib.Path:
+    """A private copy of $DDR_HOME for one run, so whatever the agent records (domain logs,
+    notes, taste events, gate waivers) lands in the run folder and never in the real one."""
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    for name in HOME_COPY:
+        p = src / name
+        if p.is_dir():
+            shutil.copytree(p, dest / name, ignore=shutil.ignore_patterns("shots", ".git"),
+                            ignore_dangling_symlinks=True)
+        elif p.is_file():
+            shutil.copy2(p, dest / name)
+    return dest
+
+
+def run_one(case: dict, arm: str, arm_path: pathlib.Path, run_root: pathlib.Path, binary: str, model: str = "",
+            preamble: bool = True) -> dict:
     d = run_root / case["id"] / arm
     if d.exists():
         shutil.rmtree(d)
@@ -655,14 +707,16 @@ def run_one(case: dict, arm: str, arm_path: pathlib.Path, run_root: pathlib.Path
     else:
         workdir.mkdir(parents=True)
     _git_baseline(workdir)
+    ddr_home = copy_home(home(), d / "ddr_home")
+    env = dict(os.environ, DDR_HOME=str(ddr_home))
     plugin = build_plugin(arm_path, d / "plugin")
-    argv = build_argv(binary, case, plugin, model)
+    argv = build_argv(binary, case, plugin, model, preamble)
     rec = {"case": case["id"], "arm": arm, "status": "launch-error", "exit_code": None, "reason": "",
            "started": _now(), "argv": argv[1:]}
     t0 = time.time()
     with open(d / "transcript.jsonl", "wb") as out, open(d / "stderr.txt", "wb") as err:
         try:
-            p = subprocess.Popen(argv, cwd=str(workdir), stdin=subprocess.DEVNULL, stdout=out, stderr=err,
+            p = subprocess.Popen(argv, cwd=str(workdir), stdin=subprocess.DEVNULL, stdout=out, stderr=err, env=env,
                                  start_new_session=(os.name == "posix"))
         except OSError as e:
             rec["reason"] = f"could not start {binary}: {e}"
@@ -686,7 +740,7 @@ def run_one(case: dict, arm: str, arm_path: pathlib.Path, run_root: pathlib.Path
 def _grade_record(rec: dict, case: dict, d: pathlib.Path, trace: Trace = None) -> dict:
     trace = trace or Trace.from_jsonl(d / "transcript.jsonl")
     fixture = pathlib.Path(case["dir"]) / case["fixture"] if case.get("fixture") else None
-    ctx = Context(workdir=d / "workdir", fixture=fixture, trace=trace, case=case)
+    ctx = Context(workdir=d / "workdir", fixture=fixture, trace=trace, case=case, ddr_home=d / "ddr_home")
     grades = grade_case(case, ctx)
     res = trace.result or {}
     rec.update({
@@ -784,20 +838,71 @@ def cmd_list(a) -> int:
     return 1 if problems else 0
 
 
+def _git(repo: pathlib.Path, *args, **kw):
+    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, timeout=120, **kw)
+
+
+def _check_git_arm(name: str, m) -> tuple:
+    """Resolve git:<repo>@<ref>:<path> to a commit without writing anything. (info, problem)."""
+    if not shutil.which("git"):
+        return None, f"--arm {name}: git is not installed"
+    repo = pathlib.Path(m.group("repo")).expanduser().resolve()
+    ref, path = m.group("ref"), m.group("path").strip("/")
+    r = _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}", text=True)
+    if r.returncode != 0:
+        return None, f"--arm {name}: {ref!r} is not a commit in {repo}"
+    commit = r.stdout.strip()
+    if _git(repo, "cat-file", "-e", f"{commit}:{path + '/' if path else ''}SKILL.md").returncode != 0:
+        return None, f"--arm {name}: {path or '.'}/SKILL.md is not in {ref} ({commit[:10]})"
+    return {"repo": str(repo), "ref": ref, "commit": commit, "path": path}, None
+
+
+def materialise_git_arm(info: dict, dest: pathlib.Path) -> pathlib.Path:
+    """git archive the arm's path at its commit into dest: the baseline is exactly that commit."""
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    args = ["archive", "--format=tar", info["commit"]] + ([info["path"]] if info["path"] else [])
+    r = _git(pathlib.Path(info["repo"]), *args)
+    if r.returncode != 0:
+        raise OSError(f"git archive failed: {r.stderr.decode(errors='replace').strip()[:200]}")
+    with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tar:
+        safe = [t for t in tar.getmembers()
+                if not t.name.startswith("/") and ".." not in pathlib.PurePosixPath(t.name).parts]
+        try:
+            tar.extractall(dest, members=safe, filter="data")
+        except TypeError:  # Python before the extraction filters
+            tar.extractall(dest, members=safe)
+    return dest / info["path"] if info["path"] else dest
+
+
 def _parse_arms(specs) -> tuple:
+    """{name: {"spec", "path" (a skill dir, or None until a git arm is archived), "git"}}, problems."""
     arms, problems = {}, []
     for s in specs or []:
         name, sep, path = s.partition("=")
         if not sep or not re.fullmatch(r"[A-Za-z0-9_.-]+", name):
-            problems.append(f"--arm {s!r}: write it as name=<path to a skill directory>")
+            problems.append(f"--arm {s!r}: write it as name=<skill dir> or name=git:<repo>@<ref>:<path>")
+            continue
+        if name in arms:
+            problems.append(f"--arm {name} given twice")
+            continue
+        if path.startswith("git:"):
+            m = GIT_ARM.fullmatch(path)
+            if not m:
+                problems.append(f"--arm {name}: write a git arm as git:<repo>@<ref>:<path>")
+                continue
+            info, problem = _check_git_arm(name, m)
+            if problem:
+                problems.append(problem)
+            else:
+                arms[name] = {"spec": path, "path": None, "git": info}
             continue
         p = pathlib.Path(path).expanduser().resolve()
         if not (p / "SKILL.md").is_file():
             problems.append(f"--arm {name}: {p} has no SKILL.md")
-        elif name in arms:
-            problems.append(f"--arm {name} given twice")
         else:
-            arms[name] = p
+            arms[name] = {"spec": path, "path": p, "git": None}
     if not specs:
         problems.append("give at least one --arm name=<skill dir>")
     return arms, problems
@@ -824,8 +929,10 @@ def cmd_run(a) -> int:
     print(f"plan: {len(cases)} case(s) x {len(arms)} arm(s) = {len(cases) * len(arms)} run(s), {a.jobs} at a time")
     for c in cases:
         print(f"  {c['id']:28} ${c['budget_usd']:.2f} each, {c['timeout_min']:g} min cap, {len(c['grader'])} graders")
-    for n, p in arms.items():
-        print(f"  arm {n} = {p}")
+    for n, arm in arms.items():
+        where = f"{arm['git']['repo']} at {arm['git']['ref']} ({arm['git']['commit'][:10]}):{arm['git']['path']}" \
+            if arm["git"] else arm["path"]
+        print(f"  arm {n} = {where}")
     print(f"budget ceiling: ${ceiling:.2f} (limit ${a.max_total_usd:.2f}, raise with --max-total-usd)")
     if ceiling > a.max_total_usd:
         print(f"refused: the ceiling ${ceiling:.2f} is over --max-total-usd ${a.max_total_usd:.2f}")
@@ -845,13 +952,22 @@ def cmd_run(a) -> int:
     run_id = a.run_id or _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + secrets.token_hex(2)
     run_root = runs_dir() / run_id
     run_root.mkdir(parents=True, exist_ok=True)
+    for n, arm in arms.items():
+        if arm["git"]:
+            try:
+                arm["path"] = materialise_git_arm(arm["git"], run_root / "arms" / n)
+            except (OSError, tarfile.TarError, subprocess.TimeoutExpired) as e:
+                print(f"cannot run: --arm {n}: {e}")
+                return 2
     results = {"version": 1, "run_id": run_id, "started": _now(), "finished": None, "cases_dir": str(pathlib.Path(a.cases)),
                "claude_bin": binary, "claude_resolved": resolved, "claude_version": version, "model": a.model or None,
-               "arms": {n: {"path": str(p), "sha256": _tree_hash(p)} for n, p in arms.items()},
+               "arms": {n: {"path": str(arm["path"]), "spec": arm["spec"], "git": arm["git"],
+                         "sha256": _tree_hash(arm["path"])} for n, arm in arms.items()},
+               "preamble": PREAMBLE if a.preamble else None,
                "cases": [c["id"] for c in cases], "budget_ceiling_usd": ceiling, "results": []}
-    jobs = [(c, n, p) for c in cases for n, p in arms.items()]
+    jobs = [(c, n, arm["path"]) for c in cases for n, arm in arms.items()]
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as pool:
-        futures = {pool.submit(run_one, c, n, p, run_root, resolved, a.model): (c["id"], n) for c, n, p in jobs}
+        futures = {pool.submit(run_one, c, n, p, run_root, resolved, a.model, a.preamble): (c["id"], n) for c, n, p in jobs}
         for f in concurrent.futures.as_completed(futures):
             r = f.result()
             results["results"].append(r)
@@ -927,6 +1043,8 @@ def main(argv=None) -> int:
     s.add_argument("--dry-run", action="store_true")
     s.add_argument("--max-total-usd", type=float, default=25.0)
     s.add_argument("--run-id", default="")
+    s.add_argument("--no-preamble", dest="preamble", action="store_false",
+                   help="do not put the isolation preamble in front of each prompt")
     s = sub.add_parser("report")
     s.add_argument("run", nargs="?", default="latest")
     s.add_argument("--regrade", action="store_true", help="grade the stored transcripts and files again, spending nothing")

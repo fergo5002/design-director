@@ -174,6 +174,15 @@ class FileGraders(Base):
         self.assertEqual(self.grade({"type": "file-exists", "glob": "*.html"}).status, "pass")
         self.assertEqual(self.grade({"type": "file-exists", "glob": "*.html", "min": 2}).status, "fail")
 
+    def test_main_page_prefers_out(self):
+        self.write(self.work, "index.html", "fixture page")
+        self.write(self.work, "out/index.html", "deliverable")
+        self.assertEqual(evals.main_html(self.work).read_text(), "deliverable")
+
+    def test_ddr_home_root_without_a_copy_is_an_error(self):
+        self.assertEqual(self.grade({"type": "file-exists", "root": "ddr_home", "glob": "*"}).status, "error")
+        self.assertEqual(self.grade({"type": "file-exists", "root": "elsewhere", "glob": "*"}).status, "error")
+
     def test_globs_never_reach_into_git(self):
         self.write(self.work, ".git/hooks/x.html", "x")
         self.assertEqual(self.grade({"type": "file-exists", "glob": "**/*.html"}).status, "fail")
@@ -484,7 +493,7 @@ class Runner(unittest.TestCase):
         line = json.loads(self.argv_log.read_text().splitlines()[0])
         argv = line["argv"]
         self.assertEqual(argv[0], "-p")
-        self.assertEqual(argv[1], "Build a landing page from brief.md")
+        self.assertEqual(argv[1], evals.PREAMBLE + "\n\nBuild a landing page from brief.md")
         self.assertEqual(argv[argv.index("--setting-sources") + 1], "local")
         self.assertIn("--strict-mcp-config", argv)
         self.assertIn("--no-session-persistence", argv)
@@ -497,7 +506,7 @@ class Runner(unittest.TestCase):
         self.assertIn("**/CLAUDE.md", settings["claudeMdExcludes"])
         self.assertFalse(settings["autoMemoryEnabled"])
         deny = argv[argv.index("--disallowedTools") + 1: ]
-        for must in ("Bash(git push:*)", "Bash(vercel:*)", "Bash(wrangler:*)", "Bash(railway:*)",
+        for must in ("Bash(git push:*)", "Bash(git commit:*)", "Bash(brain:*)", "mcp__*", "Bash(vercel:*)", "Bash(wrangler:*)", "Bash(railway:*)",
                      "Bash(netlify:*)", "WebFetch", "WebSearch"):
             self.assertIn(must, deny)
         self.assertNotIn("bypassPermissions", " ".join(argv))
@@ -558,6 +567,105 @@ class Runner(unittest.TestCase):
         png = self.root / "home" / "evals" / "runs" / "r7" / "landing" / "sheet.png"
         self.assertTrue(png.exists())
         self.assertEqual(png.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+
+    def test_preamble_can_be_switched_off(self):
+        self.call("run", *self.arm_args("good"), "--run-id", "p1", "--no-preamble")
+        argv = json.loads(self.argv_log.read_text().splitlines()[-1])["argv"]
+        self.assertEqual(argv[1], "Build a landing page from brief.md")
+        self.add_case("plain", 'preamble = false\n')
+        self.call("run", *self.arm_args("good"), "--case", "plain", "--run-id", "p2")
+        argv = json.loads(self.argv_log.read_text().splitlines()[-1])["argv"]
+        self.assertEqual(argv[1], "Build a landing page from brief.md")
+
+    def test_each_run_gets_a_private_copy_of_ddr_home(self):
+        real = self.root / "home"
+        (real / "domains" / "saunas" / "shots").mkdir(parents=True)
+        (real / "domains" / "saunas" / "domain.toml").write_text('slug = "saunas"\n')
+        (real / "domains" / "saunas" / "shots" / "a.png").write_bytes(b"png")
+        (real / "brands" / "draft").mkdir(parents=True)
+        (real / "brands" / "draft" / "brand.toml").write_text('slug = "draft"\n')
+        (real / "notes").mkdir()
+        (real / "notes" / "house.jsonl").write_text('{"id": "o-000001"}\n')
+        (real / "taste.jsonl").write_text('{"kind": "win"}\n')
+        scen = pathlib.Path(os.environ["FAKE_CLAUDE_SCENARIOS"])
+        good = json.loads((scen / "good.json").read_text())
+        good["home_files"] = {"notes/house.jsonl": '{"id": "o-agent1"}\n', "taste.jsonl": '{"kind": "error"}\n'}
+        (scen / "good.json").write_text(json.dumps(good))
+        self.add_case("records", '\n[[grader]]\ntype = "text-present"\nroot = "ddr_home"\n'
+                                 'glob = "notes/*.jsonl"\npattern = "o-agent1"\n')
+        rc, out = self.call("run", *self.arm_args("good", "bad"), "--case", "records", "--run-id", "h1")
+        # the real home is untouched
+        self.assertEqual((real / "notes" / "house.jsonl").read_text(), '{"id": "o-000001"}\n')
+        self.assertEqual((real / "taste.jsonl").read_text(), '{"kind": "win"}\n')
+        logged = [json.loads(l) for l in self.argv_log.read_text().splitlines()]
+        homes = {pathlib.Path(l["ddr_home"]) for l in logged}
+        self.assertEqual(len(homes), 2, "one copy per arm")
+        run = real / "evals" / "runs" / "h1" / "records"
+        good_home = run / "good" / "ddr_home"
+        self.assertIn(good_home, homes)
+        self.assertTrue((good_home / "domains" / "saunas" / "domain.toml").exists())
+        self.assertTrue((good_home / "brands" / "draft" / "brand.toml").exists())
+        self.assertFalse((good_home / "domains" / "saunas" / "shots").exists())
+        self.assertFalse((good_home / "evals").exists())
+        self.assertIn("o-agent1", (good_home / "notes" / "house.jsonl").read_text())
+        self.assertIn("o-000001", (good_home / "notes" / "house.jsonl").read_text())
+        self.assertNotIn("o-agent1", (run / "bad" / "ddr_home" / "notes" / "house.jsonl").read_text())
+        results = json.loads((real / "evals" / "runs" / "h1" / "results.json").read_text())
+        by_arm = {r["arm"]: r for r in results["results"]}
+        status = lambda arm: [g["status"] for g in by_arm[arm]["grades"] if g["type"] == "text-present"][0]
+        self.assertEqual(status("good"), "pass")
+        self.assertEqual(status("bad"), "fail")
+
+    def git_repo(self):
+        if not shutil.which("git"):
+            self.skipTest("git not installed")
+        repo = self.root / "brainrepo"
+        skill = repo / "agent" / "skills" / "design-director"
+        skill.mkdir(parents=True)
+        g = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@localhost", "-c", "commit.gpgsign=false",
+             "-c", "core.hooksPath=/dev/null"]
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        (skill / "SKILL.md").write_text("---\nname: design-director\ndescription: old\n---\nfake-scenario: good\n")
+        (skill / "references").mkdir()
+        (skill / "references" / "a.md").write_text("old reference\n")
+        subprocess.run(g + ["add", "-A"], check=True)
+        subprocess.run(g + ["commit", "-q", "-m", "before"], check=True)
+        subprocess.run(g + ["tag", "dd-before-v2"], check=True)
+        (skill / "SKILL.md").write_text("---\nname: design-director\ndescription: new\n---\nfake-scenario: bad\n")
+        subprocess.run(g + ["commit", "-q", "-am", "after"], check=True)
+        return repo
+
+    def test_git_arm_is_archived_at_its_ref(self):
+        repo = self.git_repo()
+        spec = f"before=git:{repo}@dd-before-v2:agent/skills/design-director"
+        rc, out = self.call("run", "--arm", spec, "--arm", f"after={repo / 'agent' / 'skills' / 'design-director'}",
+                            "--run-id", "g1")
+        run = self.root / "home" / "evals" / "runs" / "g1"
+        archived = run / "arms" / "before" / "agent" / "skills" / "design-director"
+        self.assertIn("fake-scenario: good", (archived / "SKILL.md").read_text())
+        self.assertTrue((archived / "references" / "a.md").exists())
+        plugin_skill = run / "landing" / "before" / "plugin" / "skills" / "design-director" / "SKILL.md"
+        self.assertIn("fake-scenario: good", plugin_skill.read_text())
+        results = json.loads((run / "results.json").read_text())
+        self.assertEqual(results["arms"]["before"]["git"]["ref"], "dd-before-v2")
+        self.assertEqual(len(results["arms"]["before"]["git"]["commit"]), 40)
+        by_arm = {r["arm"]: r for r in results["results"]}
+        self.assertEqual(by_arm["before"]["failed"], 0, by_arm["before"]["grades"])
+        self.assertGreater(by_arm["after"]["failed"], 0)
+
+    def test_git_arm_problems_are_caught_before_spending(self):
+        repo = self.git_repo()
+        for spec, says in ((f"x=git:{repo}@no-such-tag:agent/skills/design-director", "not a commit"),
+                           (f"x=git:{repo}@dd-before-v2:agent/skills/nothing", "SKILL.md"),
+                           (f"x=git:{repo}", "git:<repo>@<ref>:<path>")):
+            rc, out = self.call("run", "--arm", spec, "--dry-run")
+            self.assertEqual(rc, 2, spec)
+            self.assertIn(says, out)
+        rc, out = self.call("run", "--arm", f"x=git:{repo}@dd-before-v2:agent/skills/design-director", "--dry-run")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("dd-before-v2", out)
+        self.assertFalse((self.root / "home" / "evals" / "runs").exists(), "a dry run writes nothing")
+        self.assertFalse(self.argv_log.exists())
 
     def test_ddr_dispatches_eval(self):
         import ddr
