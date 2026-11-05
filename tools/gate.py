@@ -613,7 +613,7 @@ def _emit_verify(args, code, findings, receipt):
         print(f"  {f['rule']:20} {f['message']}")
     print(summary)
     if code == 1:
-        print("Next: run `ddr gate run` again on the current work.")
+        print("Next: fix what is listed, run `ddr gate run` on the current work and review that run.")
     return code
 
 
