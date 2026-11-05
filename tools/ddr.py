@@ -18,6 +18,7 @@
     python tools/ddr.py history https://example.com    # how old the design is, from the Wayback Machine
     python tools/ddr.py mcp --research                  # the servers that find, look at and measure references
     python tools/ddr.py radar
+    python tools/ddr.py eval run --arm old=<skill dir> --arm new=skills/design-director --dry-run   # compare two versions on real briefs
 
 Standard library only (Python 3.9+). `shots` needs Node and `npm install` in this repo.
 """
@@ -561,6 +562,8 @@ def main(argv=None):
         return _run_py("radar", rest)
     if cmd == "history":
         return _run_py("history", rest)
+    if cmd == "eval":
+        return _run_py("evals", rest)
     if cmd in ("palette", "fonts", "routes"):
         script = {"palette": "palette.py", "fonts": "inline_fonts.py", "routes": "check_routes.py"}[cmd]
         return subprocess.call([sys.executable, str(TOOLS / script), *rest])
