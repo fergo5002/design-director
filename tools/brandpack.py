@@ -506,17 +506,37 @@ class _Rules:
         return self.allowed.get(h) or self.extended.get(h)
 
 
+LOGO_MARK = re.compile(r"""data-brand-role\s*=\s*["'](logo|mark|source)["']"""
+                       r"""|\b(class|id)\s*=\s*["'][^"']*\blogo\b|aria-label\s*=\s*["'][^"']*\blogo\b""", re.I)
+LAST_TAG = re.compile(r"<[A-Za-z][^<>]*>\s*\Z")
+
+
+def _mask_logos(text: str) -> str:
+    """text with every inline SVG that is a third party's mark blanked (newlines kept), for the colour
+    scan only: a real logo keeps its own colours, and the house rules ask for real marks. An SVG is a
+    mark when it, or the tag that directly wraps it, says so: data-brand-role="logo", a "logo" class
+    or id, or an aria-label naming a logo."""
+    def blank(m):
+        before = LAST_TAG.search(text[max(0, m.start() - 300):m.start()])
+        opening = m.group(0)[:m.group(0).find(">") + 1]
+        if LOGO_MARK.search(opening) or (before and LOGO_MARK.search(before.group(0))):
+            return re.sub(r"[^\n]", " ", m.group(0))
+        return m.group(0)
+    return re.sub(r"<svg\b[^>]*>.*?</svg\s*>", blank, text, flags=re.S | re.I)
+
+
 def _lint_file(path: pathlib.Path, text: str, R: _Rules, shown: str) -> list:
     out = []
     suffix = path.suffix.lower()
+    masked = _mask_logos(text).splitlines() if suffix in MARKUP else None
 
     def add(rule, sev, msg, n, line):
         if not _ignored(line, rule):
             out.append(_f(rule, msg, shown, sev, n))
 
     for n, line, code, spans in _code_and_copy(text, suffix):
-        # colours
-        for h, lit in colours_in(code):
+        # colours (a marked logo's own colours are blanked first)
+        for h, lit in colours_in(masked[n - 1] if masked is not None and n <= len(masked) else code):
             if h in R.banned:
                 add("color.banned", "error", f"{lit} is banned for this brand: {R.banned[h]}", n, line)
             elif h in R.allowed or h in R.ok:

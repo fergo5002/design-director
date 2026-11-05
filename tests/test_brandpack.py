@@ -522,3 +522,47 @@ class Templates(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LogoColours(unittest.TestCase):
+    """A third party's real mark keeps its own colours: an inline SVG marked as a logo is not the
+    brand's palette (found by the 2026-11-05 eval: Chase and Bank of America marks failed the lint)."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name)
+        self.old = os.environ.get("DDR_HOME")
+        os.environ["DDR_HOME"] = str(self.root / "home")
+        import brandpack
+        importlib.reload(brandpack)
+        self.bp = brandpack
+        d = self.root / "home" / "brands" / "acme"
+        d.mkdir(parents=True)
+        (d / "brand.toml").write_text('slug = "acme"\nname = "Acme"\nstatus = "active"\n')
+        (d / "tokens.json").write_text(json.dumps({"colors": {"allowed": {"ink": "#0b1b2b"}}, "fonts": {}, "copy": {}}))
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("DDR_HOME", None)
+        else:
+            os.environ["DDR_HOME"] = self.old
+        self.tmp.cleanup()
+
+    def rules(self, html):
+        f = self.root / "p.html"
+        f.write_text(html)
+        return [x["rule"] for x in self.bp.lint([str(f)], "acme")["findings"]]
+
+    SVG = '<svg width="24" height="24" fill="#117ACA" viewBox="0 0 24 24"><path fill="#012169" d="M0 0h24v24H0z"/></svg>'
+
+    def test_a_mark_inside_a_logo_wrapper_keeps_its_colours(self):
+        self.assertEqual(self.rules(f'<span class="logo">{self.SVG}</span><p style="color:#0b1b2b">Chase</p>\n'), [])
+
+    def test_data_brand_role_on_the_svg(self):
+        svg = self.SVG.replace("<svg ", '<svg data-brand-role="logo" ')
+        self.assertEqual(self.rules(f"<div>{svg}</div>\n"), [])
+
+    def test_an_unmarked_svg_is_still_checked(self):
+        self.assertIn("color.off-palette", self.rules(f'<div class="hero">{self.SVG}</div>\n'))
+
+    def test_colour_outside_the_mark_is_still_checked(self):
+        self.assertIn("color.off-palette", self.rules(f'<span class="logo">{self.SVG}</span><p style="color:#ff00ff">x</p>\n'))
