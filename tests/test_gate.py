@@ -152,6 +152,8 @@ class Order(Base):
         self.assertTrue((run_dir / "report.md").exists())
         for s in r["steps"]:
             self.assertTrue((self.proj / s["report"]).exists(), s["name"])
+        shots = json.loads((run_dir / "shots.json").read_text())
+        self.assertEqual(shots["tool"], "shots")   # the step report must not overwrite the raw render report
         self.assertEqual(r["shots_dir"], f".design/gate/{r['run_id']}/shots")
 
     def test_json_output_is_one_object(self):

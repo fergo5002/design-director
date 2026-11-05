@@ -274,7 +274,7 @@ def step_render(ctx):
     gone = [str(f) for f in ctx["files"] if not pathlib.Path(f).is_file()]
     if gone:
         return _cannot("render", f"could not run: {', '.join(gone)} does not exist")
-    json_out = ctx["run_dir"] / "render.json"
+    json_out = ctx["run_dir"] / "shots.json"
     rc, err = _run_shots(ctx, targets, json_out)
     rep = None
     if json_out.is_file():
