@@ -122,6 +122,19 @@ class ShotsEdges(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_two_files_with_one_name_never_share_shots(self):
+        # review finding 8: site/index.html and site/pricing/index.html overwrote each other
+        (self.dir / "site" / "pricing").mkdir(parents=True)
+        (self.dir / "site" / "index.html").write_text("<!doctype html><title>a</title><h1>Home</h1>")
+        (self.dir / "site" / "pricing" / "index.html").write_text("<!doctype html><title>b</title><h1>Pricing</h1>")
+        out = self.dir / "shots"
+        node(ROOT / "tools" / "shots.mjs", "--file", self.dir / "site" / "index.html",
+             "--file", self.dir / "site" / "pricing" / "index.html", "--out", out, "--flat",
+             "--viewports", "desktop-1440x900", "--no-axe")
+        names = {p.name for p in out.rglob("*motion__fold.png")}
+        self.assertEqual(names, {"index__desktop-1440x900__motion__fold.png",
+                                 "pricing-index__desktop-1440x900__motion__fold.png"})
+
     def test_old_viewport_names_still_work(self):
         p = node(ROOT / "tools" / "shots.mjs", "--file", FIX / "gate" / "index.html", "--out", self.dir, "--flat",
                  "--json-out", self.dir / "r.json", "--viewports", "desktop,phone", "--no-axe")

@@ -239,13 +239,29 @@ async function paintedFonts(ctx, page, probes) {
   return { painted, falling };
 }
 
-function slugFor(target) {
-  // A file target is named by its path, so site/index.html and site/pricing/index.html never share a name.
-  if (target.kind === 'file') {
-    let rel = path.relative(process.cwd(), target.path);
-    if (rel.startsWith('..') || path.isAbsolute(rel)) rel = target.path;
-    return rel.replace(/\.[^.]+$/, '').replace(/\W+/g, '-').replace(/^-+|-+$/g, '');
+function baseSlug(p) {
+  return p.replace(/\.[^.]+$/, '').replace(/\W+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// A file target is named by its file name; when two targets share one (site/index.html and
+// site/pricing/index.html), each is named by its path below their common folder instead, so
+// neither overwrites the other's shots. Names never depend on the working directory.
+function fileSlugs(files) {
+  const out = new Map();
+  const counts = {};
+  for (const f of files) { const b = baseSlug(path.basename(f)); counts[b] = (counts[b] || 0) + 1; }
+  const clash = files.filter((f) => counts[baseSlug(path.basename(f))] > 1);
+  let common = clash.length ? path.dirname(path.resolve(clash[0])) : '';
+  for (const f of clash) { while (common && !path.resolve(f).startsWith(common + path.sep)) common = path.dirname(common); }
+  for (const f of files) {
+    const b = baseSlug(path.basename(f));
+    out.set(f, counts[b] > 1 ? baseSlug(path.relative(common, path.resolve(f))) : b);
   }
+  return out;
+}
+
+function slugFor(target) {
+  if (target.kind === 'file') return target.slug;
   const u = new URL(target.url);
   const q = u.search ? '-q' + [...u.search].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36) : '';
   return `${u.hostname}${u.port ? '-' + u.port : ''}${u.pathname.replace(/\W+/g, '-')}`.replace(/-+$/, '') + q;
@@ -253,7 +269,8 @@ function slugFor(target) {
 
 const targets = [
   ...urls.map((u) => ({ kind: 'url', url: u, label: u })),
-  ...files.map((f) => ({ kind: 'file', path: path.resolve(f), url: pathToFileURL(path.resolve(f)).href, label: f })),
+  ...files.map((f) => ({ kind: 'file', path: path.resolve(f), url: pathToFileURL(path.resolve(f)).href, label: f,
+    slug: fileSlugs(files).get(f) })),
 ];
 
 let browser;
