@@ -167,8 +167,8 @@ def _walk(paths, md=False):
                 yield f
 
 
-def _project_config():
-    cfg = pathlib.Path.cwd() / ".design" / "lint.toml"
+def _project_config(project=None):
+    cfg = pathlib.Path(project or pathlib.Path.cwd()) / ".design" / "lint.toml"
     if not cfg.exists():
         return set(), set()
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -181,12 +181,16 @@ def _project_config():
     return set(data.get("enable", [])), set(data.get("disable", []))
 
 
-def lint_paths(paths, enable=(), disable=(), md=False) -> list[Finding]:
+def lint_paths(paths, enable=(), disable=(), md=False, problems=None) -> list[Finding]:
+    """Lint every file under paths. Pass a list as `problems` to collect files that could
+    not be read (they are skipped either way, so a caller that cares must check it)."""
     found, motion_at, reduced, controls_styled, focus_ok = [], None, False, False, False
     for f in _walk(paths, md):
         try:
             text = f.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+        except (UnicodeDecodeError, OSError) as e:
+            if problems is not None:
+                problems.append(f"{f} ({type(e).__name__})")
             continue
         found += lint_text(text, str(f), enable, disable)
         if motion_at is None and MOTION.search(text):
@@ -205,6 +209,24 @@ def lint_paths(paths, enable=(), disable=(), md=False) -> list[Finding]:
     return found
 
 
+def report(found, problems=(), missing=()) -> dict:
+    """The shared JSON shape: {ok, exit, tool, findings, summary}. Exit 2 when a path is
+    missing or a file could not be read, since a lint that could not look found nothing."""
+    findings = [{"severity": "error" if f.level == "error" else "warn", "rule": f.rule, "message": f.message,
+                 "file": f.file, "line": f.line, "level": f.level} for f in found]
+    for m in missing:
+        findings.append({"severity": "error", "rule": "tool.could-not-run", "message": f"{m} does not exist"})
+    for p in problems:
+        findings.append({"severity": "error", "rule": "tool.could-not-run", "message": f"could not read {p}"})
+    code = 2 if (missing or problems) else (1 if any(f.level == "error" for f in found) else 0)
+    from collections import Counter
+    c = Counter(f.level for f in found)
+    summary = f"{c['error']} errors, {c['warn']} warnings, {c['info']} notes"
+    if missing or problems:
+        summary += f"; could not run on {len(missing) + len(problems)} paths"
+    return {"ok": code == 0, "exit": code, "tool": "slop-lint", "findings": findings, "summary": summary}
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="ddr lint", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("paths", nargs="*", default=["."])
@@ -217,19 +239,24 @@ def main(argv=None):
     cfg_en, cfg_dis = _project_config()
     en = cfg_en | {x for x in a.enable.split(",") if x}
     dis = cfg_dis | {x for x in a.disable.split(",") if x}
-    found = lint_paths(a.paths, en, dis, a.md)
+    missing = [x for x in a.paths if not pathlib.Path(x).exists()]
+    problems = []
+    found = lint_paths([x for x in a.paths if x not in missing], en, dis, a.md, problems=problems)
     if a.errors_only:
         found = [f for f in found if f.level == "error"]
+    rep = report(found, problems, missing)
     if a.json:
-        print(json.dumps([asdict(f) for f in found], indent=1))
-    else:
-        for f in found:
-            print(f)
-        from collections import Counter
-        c = Counter(f.level for f in found)
-        print(f"\n{c['error']} errors, {c['warn']} warnings, {c['info']} notes. "
-              "A clean lint means the obvious tells are absent, not that the design is good.")
-    return 1 if any(f.level == "error" for f in found) else 0
+        print(json.dumps(rep, indent=1))
+        return rep["exit"]
+    for f in found:
+        print(f)
+    for f in rep["findings"]:
+        if f["rule"] == "tool.could-not-run":
+            print(f"could not run: {f['message']}")
+    print(f"\n{rep['summary']}. " + ("Exit 2: fix the paths, a lint that could not look found nothing."
+                                      if rep["exit"] == 2 else
+                                      "A clean lint means the obvious tells are absent, not that the design is good."))
+    return rep["exit"]
 
 
 if __name__ == "__main__":

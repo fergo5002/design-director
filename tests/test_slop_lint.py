@@ -110,5 +110,67 @@ class ProjectControls(unittest.TestCase):
             self.assertEqual(sl.lint_paths([d]), [])
             self.assertIn("ai-copy", [f.rule for f in sl.lint_paths([d], md=True)])
 
+class Cli(unittest.TestCase):
+    def run_main(self, *argv):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            rc = sl.main(list(argv))
+        return rc, out.getvalue()
+
+    def test_missing_path_is_exit_2(self):
+        rc, out = self.run_main("/definitely/not/here")
+        self.assertEqual(rc, 2)
+        self.assertIn("does not exist", out)
+
+    def test_missing_path_json(self):
+        import json
+        rc, out = self.run_main("/definitely/not/here", "--json")
+        data = json.loads(out)
+        self.assertEqual(rc, 2)
+        self.assertEqual(data["exit"], 2)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["tool"], "slop-lint")
+        self.assertEqual(data["findings"][0]["rule"], "tool.could-not-run")
+        self.assertEqual(data["findings"][0]["severity"], "error")
+
+    def test_unreadable_file_is_exit_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "bad.css").write_bytes(b"\xff\xfe\x00 not utf-8 \x99")
+            rc, out = self.run_main(d)
+            self.assertEqual(rc, 2)
+            self.assertIn("bad.css", out)
+
+    def test_clean_and_findings_keep_0_and_1(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "a.css").write_text("a{color:#111}")
+            self.assertEqual(self.run_main(d)[0], 0)
+            pathlib.Path(d, "b.css").write_text("a{background:linear-gradient(90deg,#7c3aed,#2563eb)}")
+            rc, out = self.run_main(d, "--json")
+            self.assertEqual(rc, 1)
+            data = json.loads(out)
+            self.assertEqual(data["exit"], 1)
+            f = next(x for x in data["findings"] if x["rule"] == "purple-blue-gradient")
+            self.assertEqual(f["severity"], "error")
+            self.assertTrue(f["file"].endswith("b.css"))
+            self.assertEqual(f["line"], 1)
+
+    def test_warnings_never_fail(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "a.tsx").write_text("<p>Unlock seamless value</p>")
+            rc, out = self.run_main(d, "--json")
+            self.assertEqual(rc, 0)
+            self.assertTrue(json.loads(out)["ok"])
+
+    def test_project_config_reads_a_given_project(self):
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, ".design").mkdir()
+            pathlib.Path(d, ".design", "lint.toml").write_text('disable = ["eyebrow"]\n')
+            en, dis = sl._project_config(pathlib.Path(d))
+            self.assertEqual(dis, {"eyebrow"})
+
+
 if __name__ == "__main__":
     unittest.main()
