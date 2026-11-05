@@ -52,8 +52,8 @@ class Init(Base):
 class AddSet(Base):
     def test_ids_are_allocated_in_order(self):
         self.cli("init", "--job", "edit-list")
-        self.cli("add", "--kind", "change", "--text", "Make SC the same size as PFOR", "--source", "Fergus 2026-11-04")
-        self.cli("add", "--kind", "copy", "--text", "Masthead line", "--source", "Fergus", "--exact", "Decisions in 24 hours")
+        self.cli("add", "--kind", "change", "--text", "Make the tagline the same size as the name", "--source", "Ana 2026-11-04")
+        self.cli("add", "--kind", "copy", "--text", "Masthead line", "--source", "Ana", "--exact", "Decisions in 24 hours")
         self.assertEqual([r["id"] for r in self.data()["requirements"]], ["R1", "R2", "R3"])
         self.assertEqual(self.data()["requirements"][2]["exact"], "Decisions in 24 hours")
 
@@ -68,14 +68,14 @@ class AddSet(Base):
         self.cli("add", "--kind", "change", "--text", "A", "--source", "s")
         self.cli("add", "--kind", "change", "--text", "B", "--source", "s")
         self.assertEqual(self.cli("set", "R1", "--status", "superseded", "--superseded-by", "R2",
-                                  "--evidence", "Fergus replaced it with R2 on 2026-11-05")[0], 0)
+                                  "--evidence", "Ana replaced it with R2 on 2026-11-05")[0], 0)
         self.assertEqual(self.data()["requirements"][0]["superseded_by"], "R2")
         self.assertEqual(self.cli("set", "R9", "--status", "satisfied")[0], 2)
         self.assertEqual(self.cli("set", "R2", "--status", "done")[0], 2)
-        self.assertEqual(self.cli("set", "R2", "--status", "waived", "--by", "Fergus",
+        self.assertEqual(self.cli("set", "R2", "--status", "waived", "--by", "Ana",
                                   "--evidence", "said the old size is fine")[0], 0)
         req = self.data()["requirements"][1]
-        self.assertEqual(req["waived_by"], "Fergus")
+        self.assertEqual(req["waived_by"], "Ana")
         self.assertNotIn("waived by", req["evidence"])
 
     def test_list_and_copy(self):
@@ -98,7 +98,7 @@ class Check(Base):
         self.file().write_text(json.dumps(d))
 
     def req(self, id_="R1", **kw):
-        r = {"id": id_, "kind": "change", "text": "Make it so", "source": "Fergus 2026-11-04",
+        r = {"id": id_, "kind": "change", "text": "Make it so", "source": "Ana 2026-11-04",
              "status": "open", "evidence": "", "superseded_by": None, "exact": None}
         r.update(kw)
         return r
@@ -152,7 +152,7 @@ class Check(Base):
     def test_final_needs_real_evidence(self):
         self.write([self.req(status="satisfied", evidence="done")])
         self.assertIn("contract.thin-evidence", self.rules(contract.check(self.p, "final")))
-        self.write([self.req(status="satisfied", evidence="desktop fold shot shows SC at 48px, PFOR at 48px")])
+        self.write([self.req(status="satisfied", evidence="desktop fold shot shows tagline at 48px, name at 48px")])
         self.assertEqual(contract.check(self.p, "final")["exit"], 0)
 
     def test_final_supersession_must_point_at_a_real_id(self):
@@ -170,7 +170,7 @@ class Check(Base):
     def test_final_waiver_names_who(self):
         self.write([self.req(status="waived", evidence="not needed after all, apparently")])
         self.assertIn("contract.waiver-unnamed", self.rules(contract.check(self.p, "final")))
-        self.write([self.req(status="waived", evidence="waived by Fergus on 2026-11-05: keep the old size")])
+        self.write([self.req(status="waived", evidence="waived by Ana on 2026-11-05: keep the old size")])
         self.assertEqual(contract.check(self.p, "final")["exit"], 0)
 
     def test_cli_check_json(self):

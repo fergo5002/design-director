@@ -78,8 +78,8 @@ class Contradictions(Home):
 
     def test_same_meaning_still_merges(self):
         import notes
-        notes.add("house", "Fergus asked for more air around the rate table", ["round 1"], "j1")
-        n, merged = notes.add("house", "Fergus asked for more air around the rate table again", ["round 2"], "j2")
+        notes.add("house", "Ana asked for more air around the rate table", ["round 1"], "j1")
+        n, merged = notes.add("house", "Ana asked for more air around the rate table again", ["round 2"], "j2")
         self.assertTrue(merged)
 
 
@@ -105,7 +105,7 @@ class Waivers(unittest.TestCase):
         self.tmp.cleanup()
 
     def write(self, req):
-        base = {"id": "R1", "kind": "change", "text": "x", "source": "Fergus 2026-11-05", "status": "waived",
+        base = {"id": "R1", "kind": "change", "text": "x", "source": "Ana 2026-11-05", "status": "waived",
                 "superseded_by": None, "exact": None}
         base.update(req)
         (self.p / ".design" / "brief" / "contract.json").write_text(json.dumps(
@@ -120,11 +120,11 @@ class Waivers(unittest.TestCase):
         self.assertIn("contract.waiver-unnamed", self.rules())
 
     def test_a_name_without_a_reason_is_thin(self):
-        self.write({"evidence": "waived by Fergus", "waived_by": "Fergus"})
+        self.write({"evidence": "waived by Ana", "waived_by": "Ana"})
         self.assertIn("contract.thin-evidence", self.rules())
 
     def test_name_and_reason_pass(self):
-        self.write({"evidence": "keep the old size on the phone", "waived_by": "Fergus"})
+        self.write({"evidence": "keep the old size on the phone", "waived_by": "Ana"})
         self.assertEqual(self.rules(), set())
 
 

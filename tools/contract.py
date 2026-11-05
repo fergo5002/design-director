@@ -1,17 +1,17 @@
 """The contract: every requirement of a job, in the person's words, with its status and evidence.
 
 Exact requirements are lost between rounds when they live only in a conversation: the size
-Fergus asked for in round one is gone by round three. The contract keeps them in
+the client asked for in round one is gone by round three. The contract keeps them in
 .design/brief/contract.json and two checks hold the order: `plan` before building (every
 requirement has a source) and `final` before shipping (nothing open, every closed one has
 evidence, every supersession points at a real requirement).
 
     ddr contract init --job new|edit-list|restyle --brief "one line"
-    ddr contract add --kind change --text "Make SC the same size as PFOR" --source "Fergus 2026-11-04: '...'"
+    ddr contract add --kind change --text "Make the tagline the same size as the name" --source "client 2026-11-04: '...'"
     ddr contract add --kind copy --text "Hero line" --source "..." --exact "Decisions in 24 hours"
-    ddr contract set R2 --status satisfied --evidence "desktop fold shot: SC 48px, PFOR 48px"
+    ddr contract set R2 --status satisfied --evidence "desktop fold shot: tagline 48px, name 48px"
     ddr contract set R3 --status superseded --superseded-by R5 --evidence "replaced in round 2"
-    ddr contract set R4 --status waived --by Fergus --evidence "keep the old size"
+    ddr contract set R4 --status waived --by Ana --evidence "keep the old size"
     ddr contract list
     ddr contract check --phase plan|final [--json]     # exit 0 pass, 1 findings, 2 could not run
     ddr contract copy                                   # every line that must ship verbatim

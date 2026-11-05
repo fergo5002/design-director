@@ -115,10 +115,10 @@ class Load(Base):
 
     def test_brand_toml_with_a_sources_table_parses_without_tomllib(self):
         import sources
-        text = ('slug = "draft"\nname = "Draft"\nextends = "house"\ndomains = ["fintech", "onboarding"]\n\n'
-                '[sources]\nrepo = "~/Dev/draft"\ntokens_from = ["a.css"]\n')
+        text = ('slug = "acme"\nname = "Acme"\nextends = "house"\ndomains = ["fintech", "onboarding"]\n\n'
+                '[sources]\nrepo = "~/Dev/acme"\ntokens_from = ["a.css"]\n')
         mine = sources.parse_toml_subset(text)
-        self.assertEqual(mine["sources"]["repo"], "~/Dev/draft")
+        self.assertEqual(mine["sources"]["repo"], "~/Dev/acme")
         self.assertEqual(mine["domains"], ["fintech", "onboarding"])
         try:
             import tomllib

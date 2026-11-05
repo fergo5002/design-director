@@ -34,7 +34,7 @@ you inferred rather than were told with "(inferred)".
 
 When two sources disagree, the higher one wins:
 
-1. Fergus's explicit ask for this piece.
+1. The person's explicit ask for this piece.
 2. A supplied reference.
 3. The brand pack.
 4. Standing taste (the taste ledger and house rules).

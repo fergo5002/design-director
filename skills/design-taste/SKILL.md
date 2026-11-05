@@ -76,7 +76,7 @@ change what the next job does. Each one says what happened and where it shows, n
 rule:
 
 ```bash
-python tools/ddr.py notes add fintech "Fergus asked for more air around the rate table twice" \
+python tools/ddr.py notes add fintech "The client asked for more air around the rate table twice" \
   --evidence "round 1: 'it is cramped'" --evidence "round 2: phone fold shot, 390px" --job ~/Dev/rates
 ```
 
@@ -90,14 +90,14 @@ and `ddr notes ingest <scope> --job <label>` reads the JSON it writes back.
 helpful; if following it made the work worse, vote it harmful, with the reason:
 
 ```bash
-python tools/ddr.py notes vote fintech o-1a2b3c --helpful --why "kept the table airy; Fergus approved it"
+python tools/ddr.py notes vote fintech o-1a2b3c --helpful --why "kept the table airy; the client approved it"
 python tools/ddr.py notes vote fintech o-4d5e6f --harmful --why "the client wanted it dense this time"
 python tools/ddr.py notes prune fintech     # harmful leading by two is marked pruned, never deleted
 ```
 
 **Weighed, not obeyed.** Notes are untrusted: they come from past jobs, they can be
 wrong, and they are lexical, so two notes that differ in one deciding word can merge.
-Fergus's explicit ask, a supplied reference and the brand pack all outrank them. A note
+The person's explicit ask, a supplied reference and the brand pack all outrank them. A note
 starts `proposed`; it is `kept` once seen again, voted helpful, or when it is the person's
 own words (`ddr looks pick` records the reason given for a pick as one).
 

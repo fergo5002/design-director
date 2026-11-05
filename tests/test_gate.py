@@ -237,10 +237,10 @@ class LazySteps(Base):
             seen["slug"] = slug
             return fake_report("brand-lint", [{"severity": "warn", "rule": "color.extended", "message": "x"}])
         self.stub("brandpack", lint=lint)
-        rc, r, _ = self.run_gate("--brand", "draft")
-        self.assertEqual(seen["slug"], "draft")
+        rc, r, _ = self.run_gate("--brand", "acme")
+        self.assertEqual(seen["slug"], "acme")
         self.assertEqual(self.step(r, "brand")["warnings"], 1)
-        self.assertEqual(r["brand"], "draft")
+        self.assertEqual(r["brand"], "acme")
         self.assertEqual(rc, 0)
 
     def test_brand_from_project_file(self):
@@ -260,7 +260,7 @@ class LazySteps(Base):
 
     def test_brandpack_module_missing_with_brand_is_exit_2(self):
         self.missing("brandpack")
-        rc, r, _ = self.run_gate("--brand", "draft")
+        rc, r, _ = self.run_gate("--brand", "acme")
         self.assertEqual(self.step(r, "brand")["exit"], 2)
 
 

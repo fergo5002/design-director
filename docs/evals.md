@@ -10,8 +10,8 @@ ddr eval list                                         # the cases in $DDR_HOME/e
 ddr eval run --arm old=~/skills/old/design-director \
              --arm new=skills/design-director --dry-run     # the plan and the money ceiling
 ddr eval run --arm old=... --arm new=... --jobs 2           # spend it
-ddr eval run --arm before=git:~/Brain@design-director-before-v2:agent/skills/design-director \
-             --arm after=~/Brain/agent/skills/design-director   # a tagged baseline against the working copy
+ddr eval run --arm before=git:~/skills@v1:design-director \
+             --arm after=~/skills/design-director   # a tagged baseline against the working copy
 ddr eval report latest                                # report.md again, or --json
 ddr eval report latest --regrade                      # grade stored runs again after editing graders, free
 ddr eval sheet latest                                 # one contact sheet per case, arms side by side
@@ -33,13 +33,13 @@ files the run saw.
 ## Writing a case
 
 A case is a real correction turned into a test. Each one lives in
-`$DDR_HOME/evals/cases/<id>/case.toml` (private to Fergus, never in this repo):
+`$DDR_HOME/evals/cases/<id>/case.toml` (private to you, never in this repo):
 
 ```toml
 id = "sc-masthead-size"              # must match the directory name
-title = "Make SC the same size as PFOR"
-origin = "Fergus 2026-11-04: 'the SC should be the same size'"   # the correction it encodes
-prompt = "In index.html, make the SC in the masthead the same size as PFOR. Change nothing else."
+title = "Make the tagline the same size as the name"
+origin = "client 2026-11-04: 'the tagline should be the same size'"   # the correction it encodes
+prompt = "In index.html, make the tagline in the masthead the same size as the name. Change nothing else."
 # prompt_file = "prompt.md"          # instead of prompt, for a long or multi-line brief
 fixture = "site"                     # optional: a directory beside case.toml, copied into the workdir
 budget_usd = 3                       # default 4; passed to --max-budget-usd
@@ -109,7 +109,7 @@ simplified from LangChain's design-agent (Apache License 2.0),
 Every prompt starts with this preamble unless the case sets `preamble = false` or the run is
 given `--no-preamble`:
 
-> This is an evaluation run in an isolated folder. Fergus is not available: do not ask
+> This is an evaluation run in an isolated folder. The person who asked is not available: do not ask
 > questions, decide and say what you decided. Do not write to the vault or the brain, do not
 > commit, push, deploy or publish. Save every deliverable under ./out/.
 
@@ -118,7 +118,7 @@ Each run (one case, one arm) gets its own copy of the real `$DDR_HOME` at
 or any `shots/` folder. The child process gets `DDR_HOME` pointed at that copy, so
 `ddr domain log`, `ddr notes ingest`, `ddr taste` and `ddr gate waive` write there and the copy
 stays in the run folder for a grader or a person to read. This guards the `ddr` tools only.
-An agent that writes to `~/Brain` or `~/.design-director` by absolute path is stopped by the
+An agent that writes to a real repository or `~/.design-director` by absolute path is stopped by the
 preamble and the deny list, not by the copy.
 
 ## What a run looks like
@@ -157,7 +157,7 @@ $DDR_CLAUDE_BIN -p <prompt> --output-format stream-json --verbose --include-hook
 The child's environment is the caller's with `DDR_HOME` replaced by the run's copy. stdin is
 `/dev/null`, the process gets its own process group, and on timeout the group gets
 SIGTERM then SIGKILL. Permissions stay in the default mode; nothing uses bypassPermissions.
-Set `DDR_CLAUDE_BIN` to the real binary (on Fergus's Mac `~/.local/bin/claude`): a plain
+Set `DDR_CLAUDE_BIN` to the real binary (with the native installer, `~/.local/bin/claude`): a plain
 `claude` on PATH may be a wrapper that adds hooks, and the `isolation` grader will then fail.
 
 **Web access is off.** WebFetch and WebSearch are denied for cost and so the same case gives
@@ -167,7 +167,7 @@ comparable runs. A skill whose method depends on live research is graded without
 
 The question: how does a headless run see exactly one given version of `design-director`,
 and not the user-level one at `~/.claude/skills/design-director`? `--bare` is out, because it
-skips Keychain reads and Fergus signs in with a subscription held in the login Keychain.
+skips Keychain reads and a subscription sign-in is held in the login Keychain.
 
 Method: two test arms, each a `design-director` skill whose description starts with a unique
 marker (`PROBEMARK-ALPHA-4417`, `PROBEMARK-BRAVO-9052`). Each probe asked Haiku to list its
@@ -180,9 +180,9 @@ stream-json --verbose --include-hook-events --max-budget-usd 0.15` (or 0.2).
 
 | # | binary | cwd | flags that differ | skills with design-director | user CLAUDE.md | hooks |
 |---|---|---|---|---|---|---|
-| 1 | `claude` (shell function, through cmux's shim and `~/bin/claude`) | `w1`, arm ALPHA at `w1/.claude/skills/design-director` | `--setting-sources project,local` | `design-director`, description `PROBEMARK-ALPHA-4417 ...` | quoted the canary when asked if it was there | 2 SessionStart, 2 UserPromptSubmit, 4 Stop |
-| 2 | same | `w1` | same, plus `--debug-file`; canary not named in the question | ALPHA only; debug: `user: 0, project: 1` | printed `brain-kernel-68141c9e31c8` unprompted, the `~/.claude/CLAUDE.md` value | the debug log names them: `cmux hooks claude inbox-drain`, `inbox-wait`, `auto-name`. No hook from `~/.claude/settings.json` ran |
-| 3 | `~/.local/bin/claude` | `w2` (empty) | `--setting-sources project,local --plugin-dir plugB` (arm BRAVO) | `ddarm:design-director`, `PROBEMARK-BRAVO-9052 ...` | yes, `brain-kernel-68141c9e31c8` | none |
+| 1 | `claude` (shell function, through a terminal's wrapper scripts) | `w1`, arm ALPHA at `w1/.claude/skills/design-director` | `--setting-sources project,local` | `design-director`, description `PROBEMARK-ALPHA-4417 ...` | quoted the canary when asked if it was there | 2 SessionStart, 2 UserPromptSubmit, 4 Stop |
+| 2 | same | `w1` | same, plus `--debug-file`; canary not named in the question | ALPHA only; debug: `user: 0, project: 1` | printed the canary unprompted, the `~/.claude/CLAUDE.md` value | the debug log names them: the terminal's own hooks. No hook from `~/.claude/settings.json` ran |
+| 3 | `~/.local/bin/claude` | `w2` (empty) | `--setting-sources project,local --plugin-dir plugB` (arm BRAVO) | `ddarm:design-director`, `PROBEMARK-BRAVO-9052 ...` | yes, the canary | none |
 | 4 | real | `w2` | `--safe-mode --plugin-dir plugB` | none: safe mode drops the `--plugin-dir` skill too | no | none |
 | 5 | real | `w2` | probe 3 plus `--settings '{"claudeMdExcludes": [...]}'` | `ddarm:design-director`, BRAVO | no canary, no instruction file listed | none |
 | 6 | real | `w1` (holds the ALPHA project skill) | probe 5 with `--setting-sources local` | only `ddarm:design-director`, BRAVO; debug: `project: 0` | no | none |
@@ -196,11 +196,11 @@ What each showed:
   does (probe 5).
 - With `project` in the sources, project skills load from the cwd's `.claude/skills` and from
   the git main checkout (the debug log listed `~/Dev/design-director/.claude/skills` for a
-  worktree cwd). Dropping `project` stops that (probe 6), which matters because on Fergus's
-  Mac `$DDR_HOME` resolves inside the `~/Brain` repository.
+  worktree cwd). Dropping `project` stops that (probe 6), which matters when `$DDR_HOME`
+  sits inside a git repository.
 - A plugin's skill is named `<plugin>:<skill>`. Every arm is wrapped as plugin `dd`, so the
   run sees `dd:design-director` whichever arm it is, and the arm name never reaches the model.
-- The hooks in probes 1 and 2 came from the `claude` wrapper chain in a cmux terminal, not
+- The hooks in probes 1 and 2 came from the `claude` wrapper chain in that terminal, not
   from user settings. The real binary ran none (probes 3 to 7).
 - Probe 7: the init event listed exactly the seven tools, `memory_paths` was absent
   (it was present in every earlier probe), the Skill call's input was

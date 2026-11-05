@@ -10,7 +10,7 @@
     python tools/ddr.py taste brief
     python tools/ddr.py domain match "a booking site for a sauna"   # where you stand, and how sure
     python tools/ddr.py lint src/ [--json]          # exit 0 clean, 1 findings, 2 could not look
-    python tools/ddr.py gate run --src src/ --file index.html [--copy copy.txt] [--brand draft]
+    python tools/ddr.py gate run --src src/ --file index.html [--copy copy.txt] [--brand acme]
     python tools/ddr.py gate verify --require-review   # is the receipt current, passing and reviewed
     python tools/ddr.py gate waive --reason "<why>" --src src/
     python tools/ddr.py review record --run latest --json review.json
@@ -27,7 +27,7 @@
     python tools/ddr.py radar
     python tools/ddr.py brand show acme                 # a brand pack: palette, fonts, bans, voice, graphic language
     python tools/ddr.py brand lint src/ --brand acme    # check work against the pack (exit 0, 1 findings, 2 could not run)
-    python tools/ddr.py contract add --kind copy --text "Hero" --source "Fergus 2026-11-04" --exact "..."
+    python tools/ddr.py contract add --kind copy --text "Hero" --source "client 2026-11-04" --exact "..."
     python tools/ddr.py contract check --phase final    # every requirement closed with evidence
     python tools/ddr.py claims check --src src/         # every claim on the page checked or read
     python tools/ddr.py notes add fintech "what happened" --evidence "where it shows"

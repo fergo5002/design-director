@@ -342,7 +342,7 @@ ALREADY NOTED FOR {scope}
 
 WHAT TO WRITE
 Up to five observations. An observation is something that happened in this job, with where it
-shows: "Fergus asked for more air around the rate table twice", with the evidence ["round 1:
+shows: "The client asked for more air around the rate table twice", with the evidence ["round 1:
 'it is cramped'", "round 2: 'still tight on the phone'"]. Useful ones are specific to this kind
 of work, point at what happened (quote the person, name the file, the screenshot or the
 viewport) and could change what the next job does. Write what happened and how often,

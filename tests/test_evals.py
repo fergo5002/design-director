@@ -227,7 +227,7 @@ class FileGraders(Base):
         saved = sys.modules.get("brandpack")
         sys.modules["brandpack"] = None  # makes `import brandpack` raise ImportError
         try:
-            g = self.grade({"type": "brand-lint-clean", "glob": "*.html", "brand": "draft"})
+            g = self.grade({"type": "brand-lint-clean", "glob": "*.html", "brand": "acme"})
         finally:
             if saved is None:
                 sys.modules.pop("brandpack", None)
@@ -246,7 +246,7 @@ class FileGraders(Base):
         saved = sys.modules.get("brandpack")
         sys.modules["brandpack"] = fake
         try:
-            spec = {"type": "brand-lint-clean", "glob": "*.html", "brand": "draft"}
+            spec = {"type": "brand-lint-clean", "glob": "*.html", "brand": "acme"}
             outcomes["r"] = {"ok": True, "exit": 0, "findings": [], "summary": "clean"}
             self.assertEqual(self.grade(spec).status, "pass")
             outcomes["r"] = {"ok": False, "exit": 1, "findings": [
@@ -414,7 +414,7 @@ class Runner(unittest.TestCase):
         d = self.cases / cid
         d.mkdir(parents=True)
         body = (f'id = "{cid}"\ntitle = "Landing for a sauna"\n'
-                f'origin = "Fergus 2026-11-04: \'the SC should be the same size\'"\n'
+                f'origin = "Ana 2026-11-04: \'the tagline should be the same size\'"\n'
                 f'prompt = "Build a landing page from brief.md"\n{extra}')
         if fixture:
             body += 'fixture = "site"\n'
@@ -582,8 +582,8 @@ class Runner(unittest.TestCase):
         (real / "domains" / "saunas" / "shots").mkdir(parents=True)
         (real / "domains" / "saunas" / "domain.toml").write_text('slug = "saunas"\n')
         (real / "domains" / "saunas" / "shots" / "a.png").write_bytes(b"png")
-        (real / "brands" / "draft").mkdir(parents=True)
-        (real / "brands" / "draft" / "brand.toml").write_text('slug = "draft"\n')
+        (real / "brands" / "acme").mkdir(parents=True)
+        (real / "brands" / "acme" / "brand.toml").write_text('slug = "acme"\n')
         (real / "notes").mkdir()
         (real / "notes" / "house.jsonl").write_text('{"id": "o-000001"}\n')
         (real / "taste.jsonl").write_text('{"kind": "win"}\n')
@@ -604,7 +604,7 @@ class Runner(unittest.TestCase):
         good_home = run / "good" / "ddr_home"
         self.assertIn(good_home, homes)
         self.assertTrue((good_home / "domains" / "saunas" / "domain.toml").exists())
-        self.assertTrue((good_home / "brands" / "draft" / "brand.toml").exists())
+        self.assertTrue((good_home / "brands" / "acme" / "brand.toml").exists())
         self.assertFalse((good_home / "domains" / "saunas" / "shots").exists())
         self.assertFalse((good_home / "evals").exists())
         self.assertIn("o-agent1", (good_home / "notes" / "house.jsonl").read_text())

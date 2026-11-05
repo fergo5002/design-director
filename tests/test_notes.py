@@ -59,7 +59,7 @@ class Add(Base):
         self.assertEqual(json.loads(lines[0])["id"], note["id"])
 
     def test_person_note_starts_kept(self):
-        note, _ = self.n.add("fintech", "Fergus picked the ledger look for its calm", ["looks pick"], "a", person=True)
+        note, _ = self.n.add("fintech", "Ana picked the ledger look for its calm", ["looks pick"], "a", person=True)
         self.assertEqual(note["status"], "kept")
         self.assertTrue(note["person"])
 
@@ -181,7 +181,7 @@ class Render(Base):
 class PostJob(Base):
     def test_brief_names_scope_summary_existing_and_limit(self):
         self.n.add("fintech", "Existing note about the rate table", [], "a")
-        text = self.n.post_job_brief("fintech", "Built the rates page; Fergus asked for more air twice.")
+        text = self.n.post_job_brief("fintech", "Built the rates page; Ana asked for more air twice.")
         for needle in ("fintech", "more air twice", "Existing note about the rate table", "five",
                        '"observations"', "never a rule"):
             self.assertIn(needle, text)
@@ -219,7 +219,7 @@ class Promote(Base):
         self.n.vote("fintech", weak["id"], True)
         self.n.vote("fintech", weak["id"], True)
         self.n.vote("fintech", weak["id"], True)        # score 3 but one job
-        person, _ = self.n.add("fintech", "Fergus said the hero must show a real rate", [], "a", person=True)
+        person, _ = self.n.add("fintech", "Ana said the hero must show a real rate", [], "a", person=True)
         for _ in range(3):
             self.n.vote("fintech", person["id"], True)
         ids = [c["id"] for c in self.n.promote("fintech")]

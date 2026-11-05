@@ -6,7 +6,7 @@
     ddr eval report <run_id|latest> [--regrade] [--json]
     ddr eval sheet <run_id|latest>
 
-Cases live in $DDR_HOME/evals/cases/<id>/case.toml (Fergus's, private). Each run writes
+Cases live in $DDR_HOME/evals/cases/<id>/case.toml (yours, private). Each run writes
 $DDR_HOME/evals/runs/<run_id>/<case>/<arm>/ (workdir, transcript.jsonl, stderr.txt,
 grades.json) and results.json plus report.md at the run root. docs/evals.md has the case
 format, the graders and what the harness cannot see.
@@ -67,7 +67,7 @@ WRITES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 SKIP = {".git", "node_modules"}
 MAX_JOBS = 3
 # Put in front of every prompt unless the case says `preamble = false` or run gets --no-preamble.
-PREAMBLE = ("This is an evaluation run in an isolated folder. Fergus is not available: do not ask questions, "
+PREAMBLE = ("This is an evaluation run in an isolated folder. The person who asked is not available: do not ask questions, "
             "decide and say what you decided. Do not write to the vault or the brain, do not commit, push, "
             "deploy or publish. Save every deliverable under ./out/.")
 # What a run's private copy of $DDR_HOME carries. evals/ and every shots/ folder stay behind.

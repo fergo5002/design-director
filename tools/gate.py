@@ -1,6 +1,6 @@
 """ddr gate: the checks that must pass before design work ships, in an order fixed in code.
 
-    ddr gate run --src src/ --file index.html [--copy copy.txt] [--brand draft]
+    ddr gate run --src src/ --file index.html [--copy copy.txt] [--brand acme]
     ddr gate run --src src/ --url http://localhost:3000 [--viewports mac-1512x820,phone-390x844]
     ddr gate run --src print/ --no-render --why "a PDF, not a web page"
     ddr gate verify [--require-review] [--files src/a.css ...]     # the deploy hook calls this
