@@ -140,6 +140,53 @@ class Init(unittest.TestCase):
             finally:
                 os.chdir(cwd)
 
+    def test_init_creates_the_brief_folder_from_the_template_and_keeps_yours(self):
+        import ddr
+        with tempfile.TemporaryDirectory() as d:
+            cwd = os.getcwd(); os.chdir(d)
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    ddr.init([])
+                brief = pathlib.Path(".design/brief/BRIEF.md")
+                text = brief.read_text(encoding="utf-8")
+                for needle in ("Goal", "Audience and place", "One message", "Proof", "Deliverables", "Must include",
+                               "Look", "Precedence", "Decisions", "contract.json", "claims.json"):
+                    self.assertIn(needle, text)
+                order = text[text.index("## Precedence"):].lower()
+                order = order[:order.index("\n## ", 4)]
+                for a, b in (("explicit ask", "supplied reference"), ("supplied reference", "brand pack"),
+                             ("brand pack", "standing taste"), ("standing taste", "skill defaults")):
+                    self.assertLess(order.index(a), order.index(b))
+                brief.write_text("mine", encoding="utf-8")
+                with contextlib.redirect_stdout(io.StringIO()):
+                    ddr.init([])
+                self.assertEqual(brief.read_text(encoding="utf-8"), "mine")
+                self.assertTrue(pathlib.Path(".design/taste.md").exists())
+            finally:
+                os.chdir(cwd)
+
+
+class NewCommands(unittest.TestCase):
+    def test_new_commands_dispatch_and_routes_know_them(self):
+        import ddr, check_routes
+        with tempfile.TemporaryDirectory() as d:
+            old = os.environ.get("DDR_HOME"); os.environ["DDR_HOME"] = d
+            cwd = os.getcwd(); os.chdir(d)
+            try:
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(ddr.main(["brand", "list"]), 0)
+                    self.assertEqual(ddr.main(["notes", "render", "fintech"]), 0)
+                    self.assertEqual(ddr.main(["contract", "check", "--phase", "plan"]), 2)   # no contract: could not run
+                    self.assertEqual(ddr.main(["claims", "list"]), 0)
+                    self.assertEqual(ddr.main(["looks", "pick", "--look", "b"]), 2)        # --why is required
+            finally:
+                os.chdir(cwd)
+                if old is None: os.environ.pop("DDR_HOME", None)
+                else: os.environ["DDR_HOME"] = old
+        for cmd in ("brand", "contract", "claims", "notes", "looks"):
+            self.assertIn(cmd, check_routes.DD_COMMANDS)
+            self.assertIn(f"ddr.py {cmd}", ddr.__doc__)
+
 
 class Routing(unittest.TestCase):
     def setUp(self):

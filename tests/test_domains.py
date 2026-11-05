@@ -549,5 +549,91 @@ class Matching(Base):
             res = self.d.match(brief)
             self.assertTrue(res["sectors"] and res["sectors"][0]["slug"] == "stays", brief)
 
+class UnknownSections(Base):
+    """Lessons and promoted notes live in dossier sections domains.py does not know. Every
+    write path must leave them alone, and they must never move the confidence score."""
+    EXTRA = ("## Lessons\n\n### Rates on the baseline {#L-2026-11-05-rates}\n\nA lesson in a person's words.\n\n"
+             "## Proposed guidance\n\n- Rate tables read best right aligned (note [o-abc123], +3/-0, promoted 2026-11-05)\n")
+
+    def with_extra(self, slug="fintech"):
+        p = self.d.load(slug)["path"] / "dossier.md"
+        p.write_text(p.read_text(encoding="utf-8").rstrip() + "\n\n" + self.EXTRA, encoding="utf-8")
+        return p
+
+    def assert_intact(self, p):
+        secs = self.d.dossier_sections(p.read_text(encoding="utf-8"))
+        self.assertIn("A lesson in a person's words.", secs["Lessons"])
+        self.assertIn("{#L-2026-11-05-rates}", secs["Lessons"])
+        self.assertIn("note [o-abc123]", secs["Proposed guidance"])
+
+    def test_every_write_path_keeps_them(self):
+        self.fintech()
+        self.write_dossier("fintech")
+        p = self.with_extra()
+        before = p.read_text(encoding="utf-8")
+        r = self.ref()
+        self.ref(name="Monzo", url="https://monzo.com")
+        self.d.log("fintech", "shipped", "Rates page", today=TODAY)
+        self.d.log("fintech", "miss", "Card soup", why="nothing leads", today=TODAY)
+        self.d.resolve("fintech", "Card soup", "DASHBOARDS.md Part 2", today=TODAY)
+        self.d.edit_ref("fintech", r["id"], take="A better take")
+        self.d.reverify("fintech", r["id"], evidence="flow", today=TODAY)
+        self.d.retire_ref("fintech", "https://monzo.com", reason="redesigned", today=TODAY)
+        self.d.edit_domain("fintech", summary="New summary", add_keywords=["mortgage"], today=TODAY)
+        self.d.create("onboarding", "Onboarding", "pattern", keywords=["signup", "kyc", "onboarding"])
+        self.d.relate("fintech", "onboarding", how="KYC-heavy signup", today=TODAY)
+        self.assertEqual(self.d.sync("fintech", today=TODAY), [])
+        self.assertEqual(p.read_text(encoding="utf-8"), before)
+        self.assert_intact(p)
+        self.assertIn("## Lessons", self.d.load("fintech")["dossier"])
+
+    def test_merge_keeps_the_destinations_and_carries_the_sources(self):
+        self.fintech()
+        p = self.with_extra()
+        self.d.create("banking", "Banking", "sector", keywords=["bank", "current account"])
+        src = self.with_extra("banking")
+        src.write_text(src.read_text(encoding="utf-8").replace("A lesson in a person's words.", "Banking lesson."),
+                       encoding="utf-8")
+        self.d.merge("banking", "fintech", today=TODAY)
+        self.assert_intact(p)
+        text = p.read_text(encoding="utf-8")
+        self.assertIn("Banking lesson.", text)          # carried under the merged-from block
+        self.assertIn("Banking lesson.", src.read_text(encoding="utf-8"))   # source left as it was
+
+    def test_a_starters_sections_survive_the_first_write(self):
+        seed = self.seeds / "wellness"
+        seed.mkdir()
+        (seed / "domain.toml").write_text('slug = "wellness"\ntitle = "Wellness"\nkind = "sector"\nkeywords = ["spa", "sauna", "wellness"]\n')
+        (seed / "dossier.md").write_text("# Wellness\n\n" + self.EXTRA)
+        seed_before = (seed / "dossier.md").read_text()
+        self.ref("wellness")                              # the first write makes your layer
+        self.assertEqual(self.d.load("wellness")["layer"], "home")
+        secs = self.d.dossier_sections(self.d.load("wellness")["dossier"])
+        self.assertIn("A lesson in a person's words.", secs["Lessons"])
+        self.assertIn("note [o-abc123]", secs["Proposed guidance"])
+        self.assertEqual((seed / "dossier.md").read_text(), seed_before)
+
+    def test_confidence_ignores_them(self):
+        self.fintech()
+        self.write_dossier("fintech")
+        for i in range(4):
+            self.ref(name=f"R{i}", url=f"https://r{i}.example")
+        plain = self.d.confidence(self.d.load("fintech"), today=TODAY)
+        p = self.with_extra()
+        p.write_text(p.read_text(encoding="utf-8") + "\n" + " ".join(["word"] * 200) + "\n", encoding="utf-8")
+        extra = self.d.confidence(self.d.load("fintech"), today=TODAY)
+        self.assertEqual(plain["score"], extra["score"])
+        self.assertEqual(plain["parts"], extra["parts"])
+        self.assertEqual(plain["gaps"], extra["gaps"])
+
+    def test_brief_prints_both_sections_in_full(self):
+        self.fintech()
+        self.with_extra()
+        out = self.d.brief(self.d.load("fintech"), today=TODAY)
+        self.assertIn("## Lessons\n### Rates on the baseline {#L-2026-11-05-rates}\n\nA lesson in a person's words.", out)
+        self.assertIn("## Proposed guidance\n- Rate tables read best right aligned", out)
+        self.assertLess(out.index("## What would raise confidence"), out.index("## Lessons"))
+
+
 if __name__ == "__main__":
     unittest.main()
