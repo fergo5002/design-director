@@ -33,6 +33,7 @@
     python tools/ddr.py notes add fintech "what happened" --evidence "where it shows"
     python tools/ddr.py notes promote --apply           # strong notes into a dossier's Proposed guidance
     python tools/ddr.py looks pick --look b --why "the person's reason" --others a,c --domain fintech
+    python tools/ddr.py eval run --arm old=<skill dir> --arm new=skills/design-director --dry-run   # compare two versions on real briefs
 
 Standard library only (Python 3.9+). `shots`, `sheet`, `crop` and the gate's render step need
 Node and `npm install` in this repo.
@@ -582,6 +583,8 @@ def main(argv=None):
         return _run_py("brandpack", rest)
     if cmd in ("contract", "claims", "notes", "looks"):
         return _run_py(cmd, rest)
+    if cmd == "eval":
+        return _run_py("evals", rest)
     if cmd in ("palette", "fonts", "routes"):
         script = {"palette": "palette.py", "fonts": "inline_fonts.py", "routes": "check_routes.py"}[cmd]
         return subprocess.call([sys.executable, str(TOOLS / script), *rest])
