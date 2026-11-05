@@ -36,7 +36,9 @@ def pick(look: str, why: str, others=(), domain: str = "", tags=(), values: str 
     out = {"taste": ev, "note": None}
     if dom is not None:
         day = _dt.date.today().isoformat()
-        note, _ = notes.add(dom["slug"], f"{what[0].upper()}{what[1:]}: {why.strip()}",
+        # The reason is the note and the choice is its evidence: a shared "Picked look X over Y" prefix
+        # made two different picks lexically similar enough to merge (review, 2026-11-05).
+        note, _ = notes.add(dom["slug"], why.strip(),
                             [f"{day}: {what} in {project}" + (f" ({values})" if values else "")], project, person=True)
         out["note"] = note
     return out

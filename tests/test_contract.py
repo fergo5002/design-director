@@ -74,7 +74,9 @@ class AddSet(Base):
         self.assertEqual(self.cli("set", "R2", "--status", "done")[0], 2)
         self.assertEqual(self.cli("set", "R2", "--status", "waived", "--by", "Fergus",
                                   "--evidence", "said the old size is fine")[0], 0)
-        self.assertIn("waived by Fergus", self.data()["requirements"][1]["evidence"])
+        req = self.data()["requirements"][1]
+        self.assertEqual(req["waived_by"], "Fergus")
+        self.assertNotIn("waived by", req["evidence"])
 
     def test_list_and_copy(self):
         self.cli("init")

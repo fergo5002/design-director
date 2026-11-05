@@ -144,15 +144,24 @@ def check(project, phase: str) -> dict:
             if st == "open":
                 out.append(_f("contract.open", f"still open: {r.get('text', '')}", rid))
                 continue
-            if st in ("satisfied", "superseded", "waived") and len(ev) < MIN_EVIDENCE:
+            if st in ("satisfied", "superseded") and len(ev) < MIN_EVIDENCE:
                 out.append(_f("contract.thin-evidence", f"evidence must say where it shows (at least {MIN_EVIDENCE} "
                               "characters): the screenshot, the file, the measured value", rid))
             if st == "superseded":
                 to = r.get("superseded_by")
                 if not to or to not in ids or to == rid:
                     out.append(_f("contract.superseded-dangling", f"superseded_by must name another requirement, got {to!r}", rid))
-            if st == "waived" and not re.search(r"\bby\s+\S+", ev, re.I):
-                out.append(_f("contract.waiver-unnamed", "a waiver names who waived it: `--by <name>`", rid))
+            if st == "waived":
+                who = str(r.get("waived_by") or "").strip()
+                m = re.match(r"\s*waived by ([^:]+?)\s*(?::\s*(.*))?$", ev, re.I | re.S)  # the older one-field form
+                if m:
+                    who = who or m.group(1).strip()
+                    ev = (m.group(2) or "").strip()
+                if not who:
+                    out.append(_f("contract.waiver-unnamed", "a waiver names who waived it: `--by <name>`", rid))
+                elif len(ev) < MIN_EVIDENCE:
+                    out.append(_f("contract.thin-evidence", f"a waiver says why, in at least {MIN_EVIDENCE} characters "
+                                  "besides the name: `--evidence \"...\"`", rid))
     return _report(out)
 
 
@@ -251,7 +260,9 @@ def main(argv=None):
                 r["superseded_by"] = a.superseded_by
             if a.evidence is not None or a.by:
                 ev = (a.evidence or "").strip()
-                r["evidence"] = (f"waived by {a.by}: {ev}" if a.by else ev).strip(": ")
+                r["evidence"] = ev
+                if a.by:
+                    r["waived_by"] = a.by
             for k in ("text", "source", "exact"):
                 if getattr(a, k) is not None:
                     r[k] = getattr(a, k)

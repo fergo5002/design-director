@@ -193,6 +193,20 @@ function measure({ probeAttr, generic }) {
     fontsLoaded: [...new Set(loaded)],
     probes,
     text: document.body.innerText || '',
+    // The words as written, before CSS text-transform (innerText applies it). Visible text nodes only.
+    textAuthored: (() => {
+      const out = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        const el = n.parentElement;
+        if (!el || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/.test(el.tagName)) continue;
+        if (el.closest('[hidden],[aria-hidden="true"]')) continue;
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || !el.getClientRects().length) continue;
+        out.push(n.nodeValue);
+      }
+      return out.join(' ').replace(/\s+/g, ' ').trim();
+    })(),
   };
 }
 
@@ -226,7 +240,12 @@ async function paintedFonts(ctx, page, probes) {
 }
 
 function slugFor(target) {
-  if (target.kind === 'file') return path.basename(target.path).replace(/\.[^.]+$/, '').replace(/\W+/g, '-');
+  // A file target is named by its path, so site/index.html and site/pricing/index.html never share a name.
+  if (target.kind === 'file') {
+    let rel = path.relative(process.cwd(), target.path);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) rel = target.path;
+    return rel.replace(/\.[^.]+$/, '').replace(/\W+/g, '-').replace(/^-+|-+$/g, '');
+  }
   const u = new URL(target.url);
   const q = u.search ? '-q' + [...u.search].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36) : '';
   return `${u.hostname}${u.port ? '-' + u.port : ''}${u.pathname.replace(/\W+/g, '-')}`.replace(/-+$/, '') + q;

@@ -98,7 +98,7 @@ shallowest first, `index.html` first at equal depth. `file-exists`, `text-presen
 their glob at the run's private copy of `$DDR_HOME` instead of the workdir, so a case can
 check what the agent recorded (a note, a domain log line, a taste event, a gate waiver). Globs never look inside `.git` or `node_modules`. The Chromium graders need
 `npm install` in this repo and run `tools/eval_render.mjs`; pages load from file URLs with
-reduced motion, so a probe reads the finished state.
+reduced motion, so a probe reads the finished state. Widths under 700 emulate a phone (`isMobile`), so a page with no viewport meta lays out at 980px, exactly as it would on a real phone: that is a real defect, and a probe will see it.
 
 The trace ideas (order of tool calls, questions before acting, cost) are ported and
 simplified from LangChain's design-agent (Apache License 2.0),

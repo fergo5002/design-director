@@ -372,6 +372,25 @@ class Fidelity(Base):
         rep = json.loads((self.proj / s["report"]).read_text())
         self.assertIn("re-cased", rep["findings"][0]["message"])
 
+    def test_css_uppercase_is_not_a_recasing(self):
+        # review finding 2: innerText applies text-transform, so the gate reads the authored text
+        rep = render_report(text="DECISIONS IN 24 HOURS")
+        for row in rep["results"]:
+            row["textAuthored"] = "Decisions in 24 hours"
+        self.render = rep
+        (self.proj / "copy.txt").write_text("Decisions in 24 hours\n")
+        rc, r, _ = self.run_gate("--copy", str(self.proj / "copy.txt"))
+        self.assertEqual(self.step(r, "fidelity")["exit"], 0)
+
+    def test_authored_recasing_is_still_an_error(self):
+        rep = render_report(text="DECISIONS IN 24 HOURS")
+        for row in rep["results"]:
+            row["textAuthored"] = "Decisions In 24 Hours"
+        self.render = rep
+        (self.proj / "copy.txt").write_text("Decisions in 24 hours\n")
+        rc, r, _ = self.run_gate("--copy", str(self.proj / "copy.txt"))
+        self.assertEqual(self.step(r, "fidelity")["exit"], 1)
+
     def test_contract_exact_copy_is_checked(self):
         d = self.proj / ".design" / "brief"
         d.mkdir(parents=True)

@@ -47,7 +47,7 @@ def done(cost=0.5, turns=4, ms=60000):
 
 INIT = {"type": "system", "subtype": "init", "skills": ["dd:design-director", "dataviz"]}
 
-GOOD_HTML = """<!doctype html><html><head><style>:root{--ink:#0b1b2b;--paper:#f6f5f1}</style></head>
+GOOD_HTML = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--ink:#0b1b2b;--paper:#f6f5f1}</style></head>
 <body><main><h1>Book a sauna</h1><p>Two hours, by the sea.</p></main></body></html>"""
 BAD_HTML = """<!doctype html><html><head><style>:root{--ink:#7c3aed;--paper:#f6f5f1}
 h1{background:linear-gradient(90deg,#7c3aed,#2563eb)}</style></head>

@@ -967,7 +967,8 @@ def cmd_run(a) -> int:
                "cases": [c["id"] for c in cases], "budget_ceiling_usd": ceiling, "results": []}
     jobs = [(c, n, arm["path"]) for c in cases for n, arm in arms.items()]
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as pool:
-        futures = {pool.submit(run_one, c, n, p, run_root, resolved, a.model, a.preamble): (c["id"], n) for c, n, p in jobs}
+        futures = {pool.submit(_safe_run_one, (c, n, p), (run_root, resolved, a.model, a.preamble)): (c["id"], n)
+                   for c, n, p in jobs}
         for f in concurrent.futures.as_completed(futures):
             r = f.result()
             results["results"].append(r)
@@ -980,6 +981,18 @@ def cmd_run(a) -> int:
     _write(run_root, results)
     print(f"\nreport: {run_root / 'report.md'}")
     return _exit_for(results["results"])
+
+
+def _safe_run_one(job, ctx) -> dict:
+    """run_one, but an exception (a fixture that will not copy, an unreadable transcript) becomes an
+    error row, so one bad case cannot abort a run whose other paid runs are still going."""
+    case, arm, path = job
+    run_root, resolved, model, preamble = ctx
+    try:
+        return run_one(case, arm, path, run_root, resolved, model, preamble)
+    except Exception as e:  # recorded, never swallowed: the row says what broke
+        return {"case": case.get("id", "?"), "arm": arm, "status": "error", "reason": f"{type(e).__name__}: {e}",
+                "passed": 0, "failed": 0, "errors": 1, "cost_usd": None, "grades": []}
 
 
 def cmd_report(a) -> int:

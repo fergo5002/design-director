@@ -410,9 +410,42 @@ def _radius_px(value: str):
     return best, pill
 
 
+MARKUP = {".html", ".htm", ".jsx", ".tsx", ".vue", ".svelte", ".astro"}
+_CODEY = re.compile(r"[;=]|=>|&&|\|\||\breturn\b|\bconst\b|\(\)")
+
+
+def _blank(m) -> str:
+    return re.sub(r"[^\n]", " ", m.group(0))
+
+
+def _markup_spans(text: str, suffix: str) -> dict:
+    """{line: [visible text]} for a markup file, including text that runs over several lines (most
+    formatted HTML puts a paragraph's words on their own line; the single-line scan missed them, review
+    2026-11-05). Script, style and comments are blanked first, keeping line numbers. In JSX a multi-line
+    span that reads like code (an arrow function before its markup) is not copy."""
+    t = re.sub(r"<(script|style)\b[^>]*>.*?</\1\s*>", _blank, text, flags=re.S | re.I)
+    t = re.sub(r"<!--.*?-->", _blank, t, flags=re.S)
+    if suffix in (".jsx", ".tsx"):
+        t = re.sub(r"/\*.*?\*/", _blank, t, flags=re.S)
+        t = re.sub(r"(?m)(^|[^:])//[^\n]*", lambda m: m.group(1) + " " * (len(m.group(0)) - len(m.group(1))), t)
+    spans: dict = {}
+    for m in re.finditer(r">([^<>{}]+)<", t):
+        raw = m.group(1)
+        words = " ".join(raw.split())
+        if len(words) < 3:
+            continue
+        if "\n" in raw and suffix in (".jsx", ".tsx") and _CODEY.search(raw):
+            continue
+        lead = len(raw) - len(raw.lstrip())
+        line = t.count("\n", 0, m.start(1) + lead) + 1
+        spans.setdefault(line, []).append(words)
+    return spans
+
+
 def _code_and_copy(text: str, suffix: str):
     """For each line: (number, line, code to check, visible text spans)."""
     md = suffix in (".md", ".mdx")
+    markup = _markup_spans(text, suffix) if suffix in MARKUP else None
     fence = False
     for n, line in enumerate(text.splitlines(), 1):
         if md:
@@ -429,7 +462,10 @@ def _code_and_copy(text: str, suffix: str):
             inline = " ".join(re.findall(r"`([^`]+)`", line))
             yield n, line, inline, [re.sub(r"`[^`]+`", " ", line)]
             continue
-        spans = [] if suffix in (".css", ".scss", ".js", ".ts") else [m.group(1) for m in TEXT_NODE.finditer(line)]
+        if markup is not None:
+            spans = markup.get(n, [])
+        else:
+            spans = [] if suffix in (".css", ".scss", ".js", ".ts") else [m.group(1) for m in TEXT_NODE.finditer(line)]
         yield n, line, line, spans
 
 

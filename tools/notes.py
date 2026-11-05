@@ -168,11 +168,23 @@ def _tokens(text: str) -> list:
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
+NEGATIONS = {"not", "no", "never", "dont", "don", "doesnt", "isnt", "wasnt", "wont", "cannot", "cant", "avoid",
+             "without", "stop", "stopped", "less", "fewer", "nor", "neither"}
+
+
+def _polarity(tokens) -> int:
+    return sum(1 for t in tokens if t in NEGATIONS) % 2
+
+
 def similarity(a: str, b: str) -> float:
-    """The higher of token Jaccard and difflib's ratio, each scaled so that its threshold is 1.0."""
+    """The higher of token Jaccard and difflib's ratio, each scaled so that its threshold is 1.0.
+    Two notes of opposite polarity ("do use serif" and "do not use serif") are never near-duplicates:
+    a contradiction is a counter-observation, not another sighting (review, 2026-11-05)."""
     ta, tb = _tokens(a), _tokens(b)
     if not ta or not tb:
         return 1.0 if a.strip().lower() == b.strip().lower() else 0.0
+    if _polarity(ta) != _polarity(tb):
+        return 0.0
     sa, sb = set(ta), set(tb)
     jaccard = len(sa & sb) / len(sa | sb)
     ratio = difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio()
@@ -219,7 +231,10 @@ def add(scope: str, text: str, evidence=(), job: str = "", person: bool = False)
     with _locked(path):
         rows = _read(path)
         now = _now()
-        best = max(((similarity(line, r.get("text", "")), r) for r in rows), key=lambda p: p[0], default=(0.0, None))
+        # A person's own words (a reason given for a pick) are a fact each time: they merge only with the
+        # same words. Lexical similarity merged "the rate table reads calm" into "... reads loud" (review).
+        sim = (lambda a, b: 1.0 if normalize(a).lower() == normalize(b).lower() else 0.0) if person else similarity
+        best = max(((sim(line, r.get("text", "")), r) for r in rows), key=lambda p: p[0], default=(0.0, None))
         if best[1] is not None and best[0] >= 1.0:
             n = best[1]
             n["helpful"] = int(n.get("helpful", 0)) + 1

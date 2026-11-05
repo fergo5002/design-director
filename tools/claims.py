@@ -84,8 +84,18 @@ def _texts(src_paths):
             yield f, _squash(raw), _squash(re.sub(r"<[^>]+>", " ", raw))
 
 
+def _split(cmd: str, windows=None) -> list:
+    """Split a check command. POSIX rules treat backslashes as escapes, which mangles a Windows path
+    (C:\\Brain\\check.py), so on Windows split without them and strip the quotes."""
+    if windows is None:
+        windows = os.name == "nt"
+    if not windows:
+        return shlex.split(cmd)
+    return [a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in "\"'" else a for a in shlex.split(cmd, posix=False)]
+
+
 def _run(cmd: str, cwd, timeout):
-    argv = shlex.split(cmd)
+    argv = _split(cmd)
     if not argv:
         raise ValueError("empty check command")
     return subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)

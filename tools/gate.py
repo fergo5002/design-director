@@ -39,7 +39,10 @@ STEPS = ("contract", "claims", "lint", "brand", "render", "fidelity", "load")
 DEFAULT_VIEWPORTS = ["mac-1512x820", "mac-1440x780", "desktop-1440x900", "phone-390x844",
                      "phone-landscape-844x390", "small-320x568"]
 DESIGN_EXTS = {".html", ".htm", ".css", ".scss", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".vue", ".svelte",
-               ".astro", ".svg", ".md", ".mdx", ".json"}
+               ".astro", ".svg", ".md", ".mdx", ".json",
+               # assets: a picture or a font swapped after review must make the receipt stale
+               ".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".otf",
+               ".mp4", ".webm", ".mov", ".lottie"}
 SKIP_DIRS = {"node_modules", ".git", ".next", "dist", "build", ".design"}
 RENDER_TIMEOUT = 900   # seconds for the whole shots run
 
@@ -353,7 +356,13 @@ def step_fidelity(ctx):
     if not lines:
         return _skip("fidelity", "no copy to check")
     desk = desktop_viewport([r["viewport"] for r in results])
-    texts = [_collapse(r.get("text", "")) for r in results if r["viewport"] == desk]
+    # textAuthored is the text as written, before CSS text-transform; innerText (text) applies it, so
+    # copy styled uppercase would read as re-cased. Older reports only have text.
+    texts = []
+    for r in results:
+        if r["viewport"] == desk:
+            texts += [_collapse(r.get("text", "")), _collapse(r.get("textAuthored", ""))]
+    texts = [t for t in texts if t]
     if desk is None or not any(texts):
         return _cannot("fidelity", "could not run: no desktop render with text to check against")
     findings = []
