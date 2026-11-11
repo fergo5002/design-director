@@ -160,6 +160,19 @@ class ShotsEdges(unittest.TestCase):
         self.assertIn("BOOKING AT 4.2%.", row["text"])
         self.assertIn("Booking at 4.2%.", row["textAuthored"])
 
+    def test_phone_overflow_is_measured_against_the_screen_not_the_stretched_window(self):
+        # Under mobile emulation innerWidth grows to fit wide content, so measuring against it never fails.
+        p = node(ROOT / "tools" / "shots.mjs", "--file", FIX / "shots" / "wide.html", "--out", self.dir / "wide",
+                 "--flat", "--json-out", self.dir / "wide.json", "--viewports", "phone-390x844,desktop-1440x900",
+                 "--no-axe")
+        rep = json.loads((self.dir / "wide.json").read_text())
+        phone = next(r for r in rep["results"] if r["viewport"] == "phone-390x844")
+        desk = next(r for r in rep["results"] if r["viewport"] == "desktop-1440x900")
+        self.assertGreater(phone["horizontalOverflow"], 700, p.stderr)
+        self.assertEqual(desk["horizontalOverflow"], 0, p.stderr)
+        # innerHeight stretches the same way, which made a long wide page count as about one screen.
+        self.assertGreater(phone["screens"], 3.4, p.stderr)
+
     def test_old_viewport_names_still_work(self):
         p = node(ROOT / "tools" / "shots.mjs", "--file", FIX / "gate" / "index.html", "--out", self.dir, "--flat",
                  "--json-out", self.dir / "r.json", "--viewports", "desktop,phone", "--no-axe")

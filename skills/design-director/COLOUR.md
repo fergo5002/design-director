@@ -96,7 +96,7 @@ things anyone can do by eye, and a checklist you cannot execute is a wish.
 - Body text **4.5:1**. Large text (24px+, or 19px+ bold) and UI edges **3:1**.
   Measured. `--strict` exits 1 so it can gate a build.
 - **Test the accent as text, not only as a fill.** `#ff3f0a` on `#ecebe7` is about
-  2.7:1 and fails; on near-black it passes. An accent that fails as text becomes a
+  2.95:1 and fails; on near-black it passes. An accent that fails as text becomes a
   fill with dark text on it, or a rule. That is what Alaris does.
 - **Measure the composite, not the tokens.** This is the one people miss. A wash, a
   scrim, a gradient overlay or a tinted panel sits between the text and its ground,

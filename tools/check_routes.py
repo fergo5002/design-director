@@ -27,7 +27,7 @@ TOOL_REF = re.compile(r"\btools/([\w.-]+\.(?:py|mjs|js))\b")
 SRC_REF = re.compile(r"\bsrc:([a-z0-9][a-z0-9-]*)\b")
 DD_REF = re.compile(r"`(?:python3?\s+\S*tools/ddr\.py|ddr)\s+([a-z]+)")
 DD_COMMANDS = {"install", "init", "doctor", "mcp", "sources", "taste", "domain", "uninstall", "lint", "radar", "palette", "fonts", "routes", "shots", "teardown", "sheet", "history", "help",
-               "gate", "review", "crop", "brand", "contract", "claims", "notes", "looks", "eval"}
+               "gate", "review", "crop", "brand", "contract", "claims", "notes", "looks", "eval", "ux"}
 # Files that exist outside a skill folder but are fine to name.
 REPO_FILES = {"README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "SOURCES.md", "LICENSE.md", "CHANGELOG.md",
               "SKILL.md", "DESIGN.md", "GEMINI.md"}

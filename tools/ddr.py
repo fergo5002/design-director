@@ -16,6 +16,7 @@
     python tools/ddr.py review record --run latest --json review.json
     python tools/ddr.py review show
     python tools/ddr.py shots https://localhost:3000 --full
+    python tools/ddr.py ux --file out/index.html      # the countable UX rules at a phone and a desktop size (UX.md)
     python tools/ddr.py teardown https://example.com --into independent-stays   # capture and measure a reference
     python tools/ddr.py sheet --domain independent-stays --with my-fold.png      # yours beside the best, same size
     python tools/ddr.py sheet --images a.png b.png --labels "Before,After" --cols 2 --out sheet.png
@@ -592,6 +593,8 @@ def main(argv=None):
         return _run_py("gate", rest)
     if cmd == "review":
         return _run_py("review", rest)
+    if cmd == "ux":
+        return subprocess.call([sys.executable, str(TOOLS / "ux_probe.py"), *rest], cwd=os.getcwd())
     if cmd == "crop":
         if not _which("node"):
             print("crop needs Node.js 18+ and `npm install` in the design-director repo"); return 2

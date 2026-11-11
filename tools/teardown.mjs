@@ -44,7 +44,9 @@ const FORBIDDEN = /\b(pay|payment|purchase|checkout|place order|confirm|submit|c
 
 // ------------------------------------------------------------------ in-page measurement
 function measure() {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  // The document element's client size: under phone emulation innerWidth and innerHeight stretch to fit the content.
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const vh = (document.compatMode === 'CSS1Compat' && document.documentElement.clientHeight) || window.innerHeight;
   const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0.05; };
   const cvs = document.createElement('canvas'); cvs.width = cvs.height = 1; const cx = cvs.getContext('2d', { willReadFrequently: true });
   const memo = new Map();

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<title>Good form and table</title>
+<style>
+  body { margin: 16px; font: 18px/1.5 Georgia, serif }
+  input, button, select { font: inherit; min-height: 48px; margin-bottom: 12px }
+  input:not([type=checkbox]) { display: block }
+  input[type=checkbox] { min-height: 24px; min-width: 24px }
+  td.n { text-align: right; font-variant-numeric: tabular-nums }
+  nav a { display: inline-block; padding: 12px }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .sr-only:focus { position: static; width: auto; height: auto; clip: auto }
+  .card { position: relative; cursor: pointer; padding: 16px; border: 1px solid #ccc }
+  .card a::after { content: ""; position: absolute; inset: 0 }
+  .tabs [role=tab] { display: inline-block; padding: 12px 16px; cursor: pointer }
+  .reel { display: flex; gap: 12px; overflow-x: auto }
+  .reel > div { flex: 0 0 300px; height: 80px; background: #eee }
+  .icon { display: inline-flex; width: 48px; height: 48px; align-items: center; justify-content: center }
+</style>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to main content</a>
+<header><nav aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/orders">Orders</a><a href="/help">Help</a></nav></header>
+<main id="main">
+<h1>Your details</h1>
+<search><input type="search" aria-label="Search orders" placeholder="Search orders"></search>
+<form novalidate>
+  <label for="n">Full name</label><input id="n" autocomplete="name" required>
+  <label for="e">Email</label><input id="e" type="email" autocomplete="email" required>
+  <label for="p">Mobile</label><input id="p" type="tel" autocomplete="tel">
+  <label for="proj">Project name</label><input id="proj">
+  <div class="small">By registering you accept our <a href="/terms">terms</a> and the way we handle your data.</div>
+  <label><input type="checkbox" name="news"> Send me offers (optional)</label>
+  <button type="submit">Save details</button>
+</form>
+<form>
+  <h2>Settings</h2>
+  <label><input type="checkbox" checked> Email me product updates</label>
+  <label><input type="checkbox" checked> Install updates automatically</label>
+</form>
+<div class="card"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="" width="40" height="40"><p>Order 1042 arrives Friday.</p><a href="/orders/1042" style="display:inline-block;padding:12px">Open order 1042</a></div>
+<div class="tabs" role="tablist"><span role="tab" aria-selected="true" tabindex="0"><span>Open</span></span><span role="tab" tabindex="-1"><span>Closed</span></span></div>
+<button class="icon"><svg aria-label="Close" width="16" height="16"></svg></button>
+<div class="reel"><div>One</div><div>Two</div><div>Three</div></div>
+<table aria-label="Orders"><thead><tr><th scope="col">Order</th><th scope="col">Total</th></tr></thead>
+<tbody><tr><td>1042</td><td class="n">€120.00</td></tr><tr><td>1041</td><td align="right" style="font-variant-numeric:tabular-nums">€1.00</td></tr><tr><td>1043</td><td class="n">€8.50</td></tr></tbody></table>
+<p>Read <a href="/terms">our full terms and conditions</a>.</p>
+<footer><ul style="list-style:none;padding:0;font-size:14px;line-height:32px"><li><a href="/a">Privacy</a></li><li><a href="/b">Cookies</a></li></ul></footer>
+<div role="dialog" aria-label="Sign in" style="visibility:hidden;position:absolute"><input placeholder="Email"><a href="#x"></a><div style="cursor:pointer">x</div></div>
+</main>
+</body>
+</html>

@@ -4,6 +4,7 @@
 //
 //   node tools/eval_render.mjs count --file page.html --selector "main > section"
 //   node tools/eval_render.mjs probe --file page.html --expr "innerWidth === 390" [--viewport 390x844] [--motion reduce]
+//   node tools/eval_render.mjs probe --url http://localhost:3000/ --expr "..."    (a served page, assets and all)
 //   node tools/eval_render.mjs sheet --out sheet.png [--title "case"] --item "arm::/abs/page.html" ...
 //
 // Pages load from file URLs with reduced motion by default, so a probe sees the finished
@@ -35,7 +36,8 @@ async function open(browser, file, vp, motion) {
   const ctx = await browser.newContext({ viewport: vp, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: 1,
     reducedMotion: motion, colorScheme: 'light' });
   const page = await ctx.newPage();
-  await page.goto(pathToFileURL(path.resolve(file)).href, { waitUntil: 'load', timeout: 30000 });
+  const href = /^https?:\/\//.test(file) ? file : pathToFileURL(path.resolve(file)).href;
+  await page.goto(href, { waitUntil: 'load', timeout: 30000 });
   await page.waitForTimeout(motion === 'reduce' ? 200 : 1200);
   return { ctx, page };
 }
@@ -49,8 +51,9 @@ try {
 
 try {
   if (verb === 'count' || verb === 'probe') {
-    const file = opt('file');
-    if (!file || !fs.existsSync(file)) fail(`no such file: ${file}`);
+    const file = opt('url') || opt('file');
+    if (opt('url') && !/^https?:\/\//.test(opt('url'))) fail(`--url needs http:// or https://, got ${opt('url')}`);
+    if (!file || (!opt('url') && !fs.existsSync(file))) fail(`no such file: ${file}`);
     const { page } = await open(browser, file, size(opt('viewport', '1440x900')), opt('motion', 'reduce'));
     if (verb === 'count') {
       const sel = opt('selector', '');
