@@ -110,7 +110,10 @@ rejection once it has produced a rule, and `ddr domain edit` changes a domain's 
 | `design-taste` | Logs praise, rejections, what shipped and process errors, so the next piece starts from them. |
 
 **Guides** (in `skills/design-director/`): `SLOP.md` (five tests that separate generated
-slop from a real design language), `TYPE.md`, `COLOUR.md`, `CRAFT.md`
+slop from a real design language), `UX.md` (how a screen works: the NN/g, WCAG 2.2 and
+GOV.UK canon with pattern pages an agent can fetch), `UI.md` (how it looks: hierarchy,
+spacing, depth, components and motion numbers from Refactoring UI, Apple HIG and Practical
+Typography), `TYPE.md`, `COLOUR.md`, `CRAFT.md`
 (spacing, motion, interaction), `DASHBOARDS.md`, `EVIDENCE.md` (making sure the page
 tells the truth), `SPECIMENS.md` (nine torn-down reference sites and the technique
 each one is the best example of), `RESEARCH.md`, and `CHECKLIST.md`, the gate.
@@ -136,6 +139,7 @@ avoid, and how it was verified.
 | `ddr sources shuffle -n 3` | A random high-signal draw across disciplines, for a direction that is not your default. |
 | `ddr lint src/` | Catches default fonts, purple-blue gradients, eyebrows, emoji icons, generated copy, removed focus rings, blocked zoom, default form controls, motion without a reduced-motion path. |
 | `ddr shots <url> --full` | Playwright at desktop, phone and 320px, with and without reduced motion: screenshots, sideways scroll with culprits, small tap targets, fonts that fell back, axe violations, word load. |
+| `ddr ux --file <page>` or `--url <url>` | The UX rules a script can count, at a phone and a desktop size: unlabelled fields, wrong input types and autofill, vague buttons, clickable divs, small targets, sideways scroll or cut-off content, misaligned numbers, pre-ticked consent. |
 | `ddr teardown <url> --into <domain>` | Look at a reference like a designer and measure what a designer would guess: folds, full page, scroll frames, faces and sizes by text set, palette by painted area, radii, spacing, motion, stack, calls to action, slop tells. `--walk "Book now>Dates"` clicks through a journey and never submits. |
 | `ddr sheet --domain <slug> --with yours.png` | Your work beside the category's best exemplars, same width, one image. |
 | `ddr history <url>` | Wayback captures by year, to see how old a look really is and how a reference changed. |

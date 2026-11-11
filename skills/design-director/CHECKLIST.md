@@ -117,7 +117,7 @@ Measure the rendered page, not the source. At phone width:
 - [ ] **Words.** `main.innerText` word count. A marketing homepage over about 400 words
       of prose is not finished. Count graphic text separately: words inside a console
       screen or a slider card are part of the picture, not part of the reading.
-- [ ] **Screens.** `scrollHeight / innerHeight`. If it is long, check what is taking the
+- [ ] **Screens.** `scrollHeight / documentElement.clientHeight` (never `innerHeight`: it stretches under phone emulation). If it is long, check what is taking the
       height. Long because of graphics is fine. Long because of paragraphs is the defect.
 - [ ] **Sections with nothing to look at.** More than one in a row is the thing that
       reads as bloat. One on its own can be the interrupt that makes the others work.

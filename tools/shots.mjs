@@ -96,7 +96,10 @@ const PROBE = 'data-ddr-font-probe';
 // node per font family, removed again after the font check.
 function measure({ probeAttr, generic }) {
   const GENERIC_RE = new RegExp(generic, 'i');
-  const vw = window.innerWidth, vh = window.innerHeight;
+  // clientWidth, not innerWidth: under mobile emulation innerWidth stretches to fit wide content, so a
+  // 1200 px row on a 390 px phone measured as no overflow at all (2026-11-11).
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const vh = (document.compatMode === 'CSS1Compat' && document.documentElement.clientHeight) || window.innerHeight;
   const doc = document.documentElement;
   const main = document.querySelector('main') || document.body;
   const words = (main.innerText || '').split(/\s+/).filter(Boolean).length;

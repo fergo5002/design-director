@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clipped on purpose</title>
+<style>
+  html, body { overflow-x: hidden } body { margin: 16px; font: 18px Georgia, serif; position: relative }
+  .blob { position: absolute; right: -200px; top: 0; width: 400px; height: 200px; background: #eee }
+  .drawer { position: fixed; top: 0; right: 0; width: 300px; transform: translateX(100%) }
+  .drawer a { display: block; padding: 12px }
+</style>
+</head>
+<body>
+<div class="blob" aria-hidden="true"></div>
+<nav class="drawer" aria-label="Menu"><a href="/a">Menu link one</a><a href="/b">Menu link two</a></nav>
+<h1>Decoration bleeds, the drawer waits off screen</h1>
+<p>Nothing a person can use is cut off.</p>
+</body>
+</html>

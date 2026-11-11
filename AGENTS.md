@@ -34,6 +34,7 @@ Run `ddr <command>` (or `python tools/ddr.py <command>` from this repo):
 - `ddr sources shuffle -n 3`: a random cross-discipline draw, for a direction that is not your default.
 - `ddr lint <src>`: the obvious generated-design tells.
 - `ddr shots <url> --full`: render at desktop, phone and 320px, with and without reduced motion, and measure.
+- `ddr ux --file <page>`: the countable UX rules at a phone and a desktop size (UX.md).
 - `ddr palette ramp|check|blend`: OKLCH ramps and measured contrast.
 - `ddr fonts`: inline a subset webfont for sandboxed pages.
 - `ddr mcp`: recommended MCP servers with setup per agent.

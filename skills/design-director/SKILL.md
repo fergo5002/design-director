@@ -104,15 +104,15 @@ Find the row and load what it says. Do not skip loading because you think you kn
 | Studio, agency, personality-led shopfront | 01 Alaris | CRAFT.md, TYPE.md | `ddr sources search "studio portfolio" --kind site` |
 | B2B SaaS marketing | 02 Linear | TYPE.md, CRAFT.md | product-ui, landing |
 | Developer tool | 03 Resend | TYPE.md | component-registry, technique-tutorial |
-| Conversion-led signup funnel | 04 Attio | COLOUR.md | product-ui flows |
+| Conversion-led signup funnel | 04 Attio | **UX.md**, COLOUR.md | product-ui flows |
 | Immersive brand, launch, campaign | 05 Lando Norris | CRAFT.md (Motion) | 3d-motion-inspo, motion-lib, 3d-webgl |
 | High-ticket commerce | 06 Scout Motors | CRAFT.md | imagery-photo, web-gallery |
 | Editorial, long-form, docs | 07 Stripe Press | TYPE.md, COLOUR.md | typography-inspo, type-foundry |
 | Restrained luxury, retail, wellness | 08 Aesop | TYPE.md, COLOUR.md | brand-identity, imagery-photo |
 | Personal site, portfolio | 09 Rauno Freiberg | CRAFT.md | studio, technique-tutorial |
-| **Dashboard, analytics, any chart** | 02 + 04 | **DASHBOARDS.md**, **EVIDENCE.md**, COLOUR.md | charts, dataviz-inspo |
-| Product UI flow (onboarding, settings, checkout) | 04 Attio | DASHBOARDS.md (Parts 1-3) | product-ui, mobile-ui, `mcp-reference` servers |
-| Component inside an existing system | none | the system's own tokens first | component-primitives, component-registry |
+| **Dashboard, analytics, any chart** | 02 + 04 | **DASHBOARDS.md**, **EVIDENCE.md**, UX.md, UI.md, COLOUR.md | charts, dataviz-inspo |
+| **Product UI, app screen or flow** (forms, onboarding, settings, checkout, tables, admin) | 04 Attio | **UX.md**, **UI.md**, DASHBOARDS.md (Parts 1-3) | product-ui, mobile-ui, component-primitives, `mcp-reference` servers |
+| Component inside an existing system | none | the system's own tokens first, then UI.md and UX.md | component-primitives, component-registry |
 | Token system or theme | none | COLOUR.md, TYPE.md | tokens, colour-tooling |
 | Logo, identity, naming | 08 Aesop | RESEARCH.md, COLOUR.md, TYPE.md | brand-identity, type-foundry |
 | New brand or big reinvention | pick by job | **RESEARCH.md** and the design-research skill | everything; use `ddr sources shuffle` |
@@ -120,6 +120,12 @@ Find the row and load what it says. Do not skip loading because you think you kn
 | Motion on a live site | none | CRAFT.md (Motion) | motion-lib, motion-reference |
 | Rendered film, sting, animation file | 05 | CRAFT.md (Motion) | motion-reference, ai-design-tool |
 | Imagery needed | none | COLOUR.md (Step 1: the subject's own world) | imagery-photo, `mcp-assets` servers |
+
+**Route by what the screen contains, too.** Whatever the row, any form, validation,
+dialog, table, empty or error state, navigation, search, filter, wizard, checkout or
+settings page loads **UX.md**. Name each pattern on the screen and fetch its pattern page
+from UX.md's table (GOV.UK, WAI-ARIA APG, React Aria, shadcn, Carbon) before building it.
+Never hand-roll a dialog, menu, combobox or date picker from memory.
 
 Search the catalogue with `ddr sources search "<what you need>" -v`, filter with
 `--kind site|library|mcp|skill|ai-tool`, `--category <slug>` (`ddr sources categories`
@@ -146,8 +152,9 @@ Where one of them disagrees with this skill, the taste ledger and the brief win,
 
 ## Step 3: Choose the materials
 
-Read TYPE.md, COLOUR.md and SLOP.md. A default typeface on a default palette is the
-fastest way to look generated. Start from the domain's *Language* section and its
+Read TYPE.md, COLOUR.md and SLOP.md, and UI.md for anything with an interface (its
+spacing scale, hierarchy, depth, component, density and motion numbers). A default
+typeface on a default palette is the fastest way to look generated. Start from the domain's *Language* section and its
 best exemplars, then push past them: a direction that only copies the category's best
 is still the category's average next year.
 
@@ -184,6 +191,12 @@ happens to be present.
   the exact install line, licence and gotchas (`ddr sources search "scroll smooth" --kind library -v`).
 - **shadcn-style registries**: `npx shadcn@latest add <component or registry URL>`.
   Check the registry's licence in the catalogue before copying code into a client repo.
+- **Component docs as plain text.** Every shadcn component has its docs at
+  `https://ui.shadcn.com/docs/components/<name>.md` and every React Aria component at
+  `https://react-aria.adobe.com/<Component>.md`; read the page before using the component.
+  In a React project that will see repeated work, add the shadcn skill and MCP
+  (`pnpm dlx skills add shadcn/ui`, `npx shadcn@latest mcp init --client claude`) and the
+  React Aria docs MCP (`claude mcp add react-aria -- npx -y @react-aria/mcp@latest`).
 - **Typeface in an app**: `next/font`, Fontsource, or self-host the files.
 - **Typeface in a sandboxed page** (an artifact, an email, a strict CSP): use
   `ddr fonts`, which downloads the real file, subsets it and emits base64 `@font-face`.
@@ -216,6 +229,12 @@ Follow the loaded guides. Non-negotiable regardless of style:
 - Real copy throughout, and **true** copy (EVIDENCE.md).
 - A desktop approval does not approve the phone composition. Inspect the phone's
   opening screen on its own terms.
+- Every block that shows data has its empty, loading, error and success states built,
+  and every form submits, fails and recovers in the page (UX.md).
+- While building, run `ddr ux --file <page.html>` (390 by 844 and 1440 by 900) and fix
+  every `fail` before review; it counts unlabelled fields, wrong input types,
+  missing autofill, vague buttons, clickable divs, small targets, sideways scroll and
+  numbers that do not line up.
 
 ## Step 6: Verify before you claim done
 
@@ -226,8 +245,10 @@ python tools/ddr.py lint src/                         # negative test: the obvio
 python tools/ddr.py shots http://localhost:3000 --full  # renders, measures, screenshots
 ```
 
-Then run CHECKLIST.md, which is short, ordered and exists because things got past
-every earlier version of it. Look at the screenshots. Passing numbers prove nothing
+Then do what the probe cannot: submit every form empty and read the errors, press Tab
+through the whole page, flip every block through its states, and walk the ten
+heuristics in one line each (UX.md). Then run CHECKLIST.md, which is short, ordered and
+exists because things got past every earlier version of it. Look at the screenshots. Passing numbers prove nothing
 about beauty. Put the screenshots beside the domain's best two exemplars at the same
 size: if yours is plainly weaker, it is not done, whatever the checks say.
 
