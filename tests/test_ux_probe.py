@@ -6,7 +6,10 @@ import json
 import pathlib
 import unittest
 
-from test_shots import READY, node
+try:
+    from test_shots import READY, node
+except ImportError:  # run as tests.test_ux_probe
+    from tests.test_shots import READY, node
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FIX = ROOT / "tests" / "fixtures" / "ux"
