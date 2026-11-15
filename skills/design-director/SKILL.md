@@ -229,6 +229,8 @@ Follow the loaded guides. Non-negotiable regardless of style:
 - Real copy throughout, and **true** copy (EVIDENCE.md).
 - A desktop approval does not approve the phone composition. Inspect the phone's
   opening screen on its own terms.
+- A big screen gets more columns or larger type, never a narrow strip in blank space.
+  The gate renders a 1920 by 1080 monitor; add `monitor-2560x1440` for a dashboard.
 - Every block that shows data has its empty, loading, error and success states built,
   and every form submits, fails and recovers in the page (UX.md).
 - While building, run `ddr ux --file <page.html>` (390 by 844 and 1440 by 900) and fix

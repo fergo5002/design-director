@@ -505,6 +505,9 @@ class Runner(unittest.TestCase):
         settings = json.loads(argv[argv.index("--settings") + 1])
         self.assertIn("**/CLAUDE.md", settings["claudeMdExcludes"])
         self.assertFalse(settings["autoMemoryEnabled"])
+        # A terminal's claude wrapper on PATH added 9 hook events to a one-command run that the real
+        # binary did not (probed 2026-11-15); with this set, 0 through either.
+        self.assertIs(settings["disableAllHooks"], True)
         deny = argv[argv.index("--disallowedTools") + 1: ]
         for must in ("Bash(git push:*)", "Bash(git commit:*)", "Bash(brain:*)", "mcp__*", "Bash(vercel:*)", "Bash(wrangler:*)", "Bash(railway:*)",
                      "Bash(netlify:*)", "WebFetch", "WebSearch"):

@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import re
 import os
 import pathlib
 import shutil
@@ -143,6 +144,14 @@ class Order(Base):
         self.assertEqual(rc, 2)
         self.assertEqual(r["verdict"], "could-not-run")
         self.assertFalse(r["rendered"])
+
+    def test_a_pass_hands_over_to_the_critic(self):
+        rc, r, out = self.run_gate()
+        self.assertEqual(rc, 0, out)
+        md = (self.proj / ".design" / "gate" / r["run_id"] / "report.md").read_text()
+        for text in (out, md):
+            self.assertIn("critic", text)
+            self.assertNotIn("score", text.lower())
 
     def test_step_report_files_written(self):
         rc, r, _ = self.run_gate()
@@ -349,6 +358,31 @@ class Render(Base):
         self.assertEqual(rc, 0)
 
 
+class Viewports(unittest.TestCase):
+    """The gate's default sizes and the renderer's must agree, and a big monitor is one of them."""
+
+    def shots_source(self):
+        return (pathlib.Path(gate.__file__).parent / "shots.mjs").read_text(encoding="utf-8")
+
+    def test_defaults_match_the_renderer(self):
+        src = self.shots_source()
+        default = re.search(r"const DEFAULT = '([^']+)'", src).group(1).split(",")
+        self.assertEqual(default, gate.DEFAULT_VIEWPORTS)
+
+    def test_every_default_is_a_known_viewport(self):
+        src = self.shots_source()
+        table = src[src.index("const VIEWPORTS = {"):src.index("};", src.index("const VIEWPORTS = {"))]
+        known = set(re.findall(r"^\s*'?([a-z][a-z0-9-]*)'?\s*:", table, re.M))
+        for v in gate.DEFAULT_VIEWPORTS + ["monitor-2560x1440", "tablet-820x1180"]:
+            self.assertIn(v, known)
+
+    def test_a_monitor_is_rendered_by_default(self):
+        self.assertIn("monitor-1920x1080", gate.DEFAULT_VIEWPORTS)
+
+    def test_a_monitor_is_not_picked_as_the_desktop(self):
+        self.assertEqual(gate.desktop_viewport(["monitor-1920x1080", "mac-1512x820"]), "mac-1512x820")
+
+
 class Fidelity(Base):
     def test_copy_file_lines_must_appear(self):
         (self.proj / "copy.txt").write_text("Hello there\nBook   a sauna\n")
@@ -524,7 +558,43 @@ class Verify(Base):
         (rdir / f"{r['run_id']}.json").write_text(json.dumps({"verdict": "fix-then-ship"}))
         rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
         self.assertEqual(rc, 1)
-        (rdir / f"{r['run_id']}.json").write_text(json.dumps({"verdict": "ship"}))
+        good = {"kind": "critic", "verdict": "ship", "cold_read_matches": True,
+                "cold_read": {"what_it_is": "a page", "who_for": "people", "next_action": "book"},
+                "ask": [{"item": "x", "met": "yes", "evidence": "phone fold"}], "defects": []}
+        (rdir / f"{r['run_id']}.json").write_text(json.dumps(good))
+        rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
+        self.assertEqual(rc, 0, out)
+
+    def test_a_bare_ship_file_is_not_a_review(self):
+        rc0, r, _ = self.run_gate()
+        rdir = self.proj / ".design" / "review"
+        rdir.mkdir(parents=True)
+        for bad in ({"verdict": "ship"}, {"verdict": "ship", "ask": "x"}, ["ship"], {"scores": {}, "verdict": "ship"}):
+            (rdir / f"{r['run_id']}.json").write_text(json.dumps(bad))
+            rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
+            self.assertEqual(rc, 1, out)
+            self.assertIn("gate.review", out)
+
+    def test_no_review_points_at_the_critic_not_at_scores(self):
+        self.run_gate()
+        rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
+        self.assertEqual(rc, 1)
+        self.assertIn("critic", out)
+        self.assertNotIn("Score it", out)
+
+    def test_a_critic_record_whose_stored_verdict_breaks_the_rule_does_not_pass(self):
+        rc0, r, _ = self.run_gate()
+        rdir = self.proj / ".design" / "review"
+        rdir.mkdir(parents=True)
+        rec = {"kind": "critic", "cold_read_matches": True, "ask": [{"item": "x", "met": "yes", "evidence": "e"}],
+               "cold_read": {"what_it_is": "a page", "who_for": "people", "next_action": "book"},
+               "defects": [{"where": "a", "what": "b", "fix": "c", "severity": "must-fix"}], "verdict": "ship"}
+        (rdir / f"{r['run_id']}.json").write_text(json.dumps(rec))
+        rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("fix-then-ship", out)
+        rec["defects"][0]["resolved"] = "next run: fixed"
+        (rdir / f"{r['run_id']}.json").write_text(json.dumps(rec))
         rc, out = self.call("verify", "--project", str(self.proj), "--require-review")
         self.assertEqual(rc, 0, out)
 

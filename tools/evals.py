@@ -60,7 +60,10 @@ DENIED = [
 # loading; these settings do, and they keep auto-memory out of the run.
 RUN_SETTINGS = {"claudeMdExcludes": [str(pathlib.Path.home() / ".claude" / "CLAUDE.md"), "**/CLAUDE.md",
                                      "**/CLAUDE.local.md", "**/AGENTS.md"],
-                "autoMemoryEnabled": False}
+                "autoMemoryEnabled": False,
+                # a terminal's `claude` wrapper on PATH can add its own hooks, which --setting-sources
+                # does not touch; this stops every hook, so none is a variable between arms
+                "disableAllHooks": True}
 PLUGIN = "dd"                       # every arm gets the same plugin name, so a run cannot tell arms apart
 SKILL = "design-director"
 WRITES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}

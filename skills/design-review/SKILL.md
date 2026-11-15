@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: Use before calling any front end, page, deck or visual done, and whenever someone asks "is this good", "does this look AI-generated", "review the design" or "why does this feel off". Runs the gate in code (contract, claims, slop and brand lint, renders at the real viewports, copy fidelity, reading load), then scores fresh screenshots against nine anchored areas, writes ranked notes, records the review with a verdict computed by rule, and for anything important gets an unanchored second opinion. Logs what it finds to the taste ledger.
+description: Use before calling any front end, page, deck or visual done, and whenever someone asks "is this good", "does this look AI-generated", "review the design" or "why does this feel off". Runs the gate in code (contract, claims, slop and brand lint, renders at the real viewports, copy fidelity, reading load), then hands fresh screenshots to one critic who has not seen the build: a cold read of the first screen before it sees the ask, each thing asked for checked in the asker's own words, defects worst first, no scores. The verdict is computed by rule, and must-fixes close on evidence rather than a second review. Logs what it finds to the taste ledger.
 ---
 
 # Design review
@@ -9,11 +9,14 @@ description: Use before calling any front end, page, deck or visual done, and wh
 
 A review that could not have failed is a ritual. The order below is fixed so the cheapest
 check that could catch a disaster runs first, and nothing is called good on the strength of
-a check that cannot see beauty. The rubric is a reading aid for judgement, not a scorecard
-to optimise: a piece that hits every anchor and still reads like generic marketing scores
-low on idea.
+a check that cannot see beauty.
 
-## 1. Three gates before any score
+Why one critic and no scores: across 150 scored reviews of real work, 80% of the scores were
+exactly the pass mark and not one review said rework, while the asker sent shipped pages back
+for not saying what the product was. The reviewers' written notes did find the real faults.
+So the critic writes notes and a cold read, and code computes the verdict.
+
+## 1. Three gates before the critic
 
 1. **Accuracy.** Every number, date, name, comparison and superlative traces to a source in
    the claims ledger (`.design/brief/claims.json`), checked by a script or a direct read,
@@ -41,7 +44,7 @@ frozen page.
 
 ## 2. Regenerate the evidence
 
-Never score from the maker's own sheet or from memory. Score from the shots of this gate
+Never judge from the maker's own sheet or from memory. Judge from the shots of this gate
 run (`.design/gate/<run_id>/shots/`). Open at least the phone fold and a desktop or mac
 fold; `ddr review record` refuses a review that does not list both. Then make your own views:
 
@@ -53,69 +56,96 @@ python tools/ddr.py crop <before.png> <after.png> --box L,T,W,H --scale 2 --out 
 Put the work beside the two best exemplars in the domain (`ddr domain brief <slug>` lists
 them) at the same size. Zoom into type and fine geometry with a crop. For an edit, crop the
 same region before and after. If the work is plainly weaker than the category's best, say
-so, whatever the scores say.
+so, whatever the checks say.
 
-## 3. Score the nine areas
+## 3. One critic, cold read first
 
-Score each 1 to 5; 4 and 2 sit between the anchors. Cite the shot, the crop, the size or
-the number behind every score.
+The critic is a fresh agent (or a person) that has not seen how the work was built. Give it
+the shots and, at first, nothing else. The builder never critiques its own work when a fresh
+agent can be started; if none can, say so in the report and do the passes below honestly,
+cold read first.
 
-| Area | 5 | 3 | 1 |
-|---|---|---|---|
-| **Idea** | One sentence a stranger could repeat; a real thing shown or bold type carrying it; survives the kill test | A real message, but the visual idea is generic or arrives as decoration | No message; shapes, glows or a stock field standing in for a concept |
-| **Hierarchy** | One focal element read first on the phone fold, at most two demands, the rest stepped down hard | Readable, but two elements compete or the support is too loud | Flat: everything at one weight, or labels where the headline should be |
-| **Copy** | Fewest words; each fact once; supplied copy exact (fidelity step clean); voice and casing from the brand | An unrequested sub-line, caption or eyebrow; a word too many | Invented copy, banned hype, or supplied copy changed |
-| **Craft** | Type sized for the view it ships at, optical spacing, every state designed (hover, focus, empty, error, loading), motion lands on a finished state | Correct but stock: default spacing, tight padding, one awkward wrap | Clipped or garbled text, broken alignment, a missing focus state |
-| **Brand** | Tokens only, one accent with meaning, the real logo at its size and clear space (brand step clean) | A slip: a second accent, a radius past the cap, the logo too small | An invented colour, a redrawn logo, off-brand faces |
-| **Fit** | The right treatment for this subject and audience; each viewport recomposed, legible at the smallest | One size scaled rather than recomposed, or small text lost on a phone | Wrong treatment for the audience, or text under platform chrome |
-| **Truth** | Every claim in the claims ledger verified (claims step clean); nothing on the page the ledger does not hold | A claim verified by memory rather than a read, or vaguer than its source | A false or unsourced headline claim |
-| **Distinctiveness** | Three named decisions a model would not make by default, and all five tests in SLOP.md pass | One or two such decisions; one SLOP.md test fails | None you can name, or two SLOP.md tests fail |
-| **Load** | Words and screens fit the job (load step: words in main, screens per viewport, no run of text-only sections, smallest text 14px or more) | Long for its job, or two text-only sections in a row | A wall: hundreds of words of prose, text under 12px on a phone |
+**Part 1, cold read.** Open only the first screen on a laptop and on a phone. Five seconds,
+as a stranger. Write, before anything else is opened:
 
-Fewer than three named decisions caps distinctiveness at 2. Write the three decisions into
-its evidence.
+```json
+{"what_it_is": "", "who_for": "", "next_action": "", "first_noticed": "", "confusing": []}
+```
 
-## 4. Notes and strengths
+This is the check that scores could not do: whether the page says what it is to someone who
+has not been told. It is copied unchanged into the record; it is not improved once the
+critic knows the ask.
 
-At most 12 notes, ranked by impact. Each has:
+**Part 2, the ask.** Now show the critic what was asked, in the asker's own words, never a
+summary. Does the cold read match what the thing is meant to be? Then each separate thing
+asked for is marked `yes`, `no` or `cannot-tell`, with the shot and region that shows it.
+Split the ask into things a person would check, not fragments of a sentence ("if we need
+one" is not an ask). An ask only the deploy can meet ("post it to /v10") is `after-ship`:
+it is checked on the live URL, not held against the build.
 
-- **where**: the shot and region (`phone fold, hero`), or the file and line
-- **what** is wrong, **why** it matters to the person looking, and the concrete **fix**
-- **severity**: MUST-FIX or NICE-TO-HAVE
+**Part 3, defects.** Every shot, worst first, at most ten. Each one: **where** (shot and
+region), **what** is wrong, the concrete **fix**, and **must-fix** (the asker would notice and
+object) or **nice-to-have**. Walk the failure patterns in section 7 and the lint warnings the
+gate printed; a warning the critic finds real on screen is a must-fix.
 
-Then name the **strengths to protect**, so the next pass does not break what works.
+## 4. The verdict follows a rule
 
-## 5. The verdict follows a rule
+- **rework** if the cold read does not match what the thing is for
+- **fix-then-ship** while any ask is `no` or any must-fix is open
+- **ship** otherwise (`cannot-tell` and `after-ship` are not a `no`; say what would tell)
 
-- **rework** if idea scores 2 or less, or any area scores 1
-- **ship** if every area scores 4 or more and no note is MUST-FIX
-- **fix-then-ship** otherwise
+Rework is kept for the one fault a fix list cannot repair. Measured on real work: in 18
+critic passes the cold read always matched, and all 14 reworks came from an ask marked `no`
+(a deploy instruction judged before the deploy, a sentence fragment, a fixable clip, a taste
+call). The owner approved four of the five pages they held up as they stood; the fifth
+failed on its taste asks, which is why those go to the owner rather than round the critic.
 
-The rule lives in code. A review whose verdict does not match it is refused.
+The rule lives in code. Leave `verdict` out and it is computed; a stated verdict that breaks
+the rule is refused, and `ddr gate verify` recomputes it from the stored read.
 
-## 6. Record it
-
-Write the review as JSON and record it against the gate run:
+## 5. Record it, and close must-fixes on evidence
 
 ```bash
-python tools/ddr.py review record --run latest --json review.json
+python tools/ddr.py review record --run latest --json critic.json
 python tools/ddr.py review show
 ```
 
 ```json
-{"reviewer": "self", "scores": {"idea": [4, "evidence"], "hierarchy": [4, "..."], "copy": [5, "..."],
-  "craft": [4, "..."], "brand": [5, "..."], "fit": [4, "..."], "truth": [5, "..."],
-  "distinctiveness": [4, "three decisions: ..."], "load": [4, "..."]},
- "notes": [{"where": "phone fold, hero", "what": "...", "why": "...", "fix": "...", "severity": "nice-to-have"}],
- "strengths": ["..."], "viewed": [".design/gate/<run_id>/shots/<file>.png"],
- "compared_with": ["<exemplar shot at the same size>"], "verdict": "ship"}
+{"reviewer": "independent", "critic": "<who or which model>",
+ "viewed": [".design/gate/<run_id>/shots/<file>.png"],
+ "cold_read": {"what_it_is": "", "who_for": "", "next_action": "", "first_noticed": "", "confusing": []},
+ "cold_read_matches": true,
+ "ask": [{"item": "<the asker's words>", "met": "yes", "evidence": "phone fold, hero"}],
+ "defects": [{"where": "phone fold, footer", "what": "...", "fix": "...", "severity": "must-fix"}]}
 ```
 
-`reviewer` is `self` or `independent`. `ddr gate verify --require-review` passes only when
-the receipt is current and the recorded verdict is ship. Changing any input after the review
-makes the receipt stale: run the gate and review again. When the gate genuinely cannot apply,
-`ddr gate waive --reason "<why>"` records that openly and logs it as an error in the taste
-ledger. It is never silent.
+`viewed` must hold a phone fold and a desktop or mac fold from that run. `reviewer` is
+`independent` or, when no fresh critic could be started, `self`.
+
+After fix-then-ship, fix the must-fixes and unmet asks, run the gate again, and close each
+one on evidence instead of a second review (`a1` is ask 1):
+
+```bash
+python tools/ddr.py review resolve --from <run the critic read> \
+  --evidence "1=phone fold of the new run: headline on two lines" --evidence "a2=hero now says 24 hours"
+```
+
+A read carries once, onto a later run that passed the gate, and never past a run that has its
+own review. It refuses an open item with no evidence, and it never carries a rework: a miss on what the
+thing is for needs a fresh critic. A second critic pass is for a rework or a new ask, not
+for checking fixes.
+
+`ddr gate verify --require-review` passes only when the receipt is current and the read for
+that run says ship. Changing any input after the gate makes the receipt stale. When the gate
+genuinely cannot apply, `ddr gate waive --reason "<why>"` records that openly and logs it as
+an error in the taste ledger. It is never silent.
+
+A record with `scores` (the older nine-area review) is still accepted, with its own rule.
+
+## 6. Strengths to protect
+
+After the record, name what works and must survive the fixes, so the next pass does not
+break it. Put them in the report, not in the critic's record.
 
 ## 7. Failure patterns
 
@@ -132,19 +162,19 @@ ledger. It is never silent.
 | Generic software look | Mono on prose, tracked uppercase labels, everything centred, floating columns, glows | Same content: mono only for literal values, labels in the text face, one alignment, real containers, no effects |
 | Faked weight | A light face stroked or outlined to look heavier | A real weight of the face, or more size |
 | Silent fallback | The chosen face never painted, so it ships in the system font | Fix the font load until the render step's font check is clean |
-| Self-review | "It's fine" from the maker | An independent look with fresh evidence (section 8) |
+| Self-review | "It's fine" from the maker | A fresh critic with fresh evidence (section 3) |
 
-## 8. Unanchored second opinion
+## 8. When to look again
 
-For anything that ships to real people, get a review that has not seen your reasoning.
-Give a fresh agent (or a person) **the screenshots and the brief, not your conclusion**,
-and ask it to score the same nine areas and name the three weakest things. Record it with
-`"reviewer": "independent"`. Compare. Where it disagrees with you, look again before
-defending your version.
+A fresh critic again only for a rework, a new ask, or a change large enough that the earlier
+read no longer describes the work. A taste ask the critic marked `no` ("give it soul") goes
+to the asker with the shots, not round another critic. Where it disagrees with the first, look again before
+defending either. More passes on the same ask are polish, not review: after two, show the
+asker where it stands and what the critic read.
 
 ## 9. Report with limits, and log
 
-Report: the gate verdict and receipt, the review verdict, what failed with evidence, what
+Report: the gate verdict and receipt, the critic's cold read and verdict, what failed with evidence, what
 you fixed, and what you did **not** check (real devices, Safari, slow networks, real data,
 licences). Then log:
 

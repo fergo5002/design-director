@@ -158,7 +158,10 @@ The child's environment is the caller's with `DDR_HOME` replaced by the run's co
 `/dev/null`, the process gets its own process group, and on timeout the group gets
 SIGTERM then SIGKILL. Permissions stay in the default mode; nothing uses bypassPermissions.
 Set `DDR_CLAUDE_BIN` to the real binary (with the native installer, `~/.local/bin/claude`): a plain
-`claude` on PATH may be a wrapper that adds hooks, and the `isolation` grader will then fail.
+`claude` on PATH may be a wrapper that adds hooks. The run settings carry `disableAllHooks`, which
+stops those too: on 2026-11-15 a terminal's wrapper added 9 hook events to a one-command run
+(the real binary added none), and 0 with the setting. Before it, every arm of a real comparison
+failed the `isolation` grader with "hooks ran".
 
 **Web access is off.** WebFetch and WebSearch are denied for cost and so the same case gives
 comparable runs. A skill whose method depends on live research is graded without it.
