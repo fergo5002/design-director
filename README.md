@@ -106,7 +106,7 @@ rejection once it has produced a rule, and `ddr domain edit` changes a domain's 
 |---|---|
 | `design-director` | The lead. Checks its confidence in the domain, names the job, the one memorable thing and what the page claims, routes to the right guide and specimen, bans the generated defaults, acquires missing libraries and fonts, sets the gate, and writes what it learnt back to the domain. |
 | `design-research` | The expertise loop: maps the best work in a category, looks at it properly, tears it down, hunts the category's slop, writes the dossier, retires what has dated, and re-scores until the agent has earned the right to design. |
-| `design-review` | Lint, render, measure, look, score, and get an unanchored second opinion before anything is called done. |
+| `design-review` | Lint, render, measure, then one fresh critic: a cold read of the first screen before it sees the ask, the ask checked in the asker's words, defects worst first, no scores. Must-fixes close on evidence. |
 | `design-taste` | Logs praise, rejections, what shipped and process errors, so the next piece starts from them. |
 
 **Guides** (in `skills/design-director/`): `SLOP.md` (five tests that separate generated

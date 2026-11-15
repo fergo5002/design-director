@@ -36,7 +36,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 STEPS = ("contract", "claims", "lint", "brand", "render", "fidelity", "load")
-DEFAULT_VIEWPORTS = ["mac-1512x820", "mac-1440x780", "desktop-1440x900", "phone-390x844",
+DEFAULT_VIEWPORTS = ["mac-1512x820", "mac-1440x780", "desktop-1440x900", "monitor-1920x1080", "phone-390x844",
                      "phone-landscape-844x390", "small-320x568"]
 DESIGN_EXTS = {".html", ".htm", ".css", ".scss", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".vue", ".svelte",
                ".astro", ".svg", ".md", ".mdx", ".json",
@@ -464,7 +464,7 @@ def _report_md(receipt, steps):
             where = _where(f)
             L.append(f"  - {f['severity']} {f['rule']}{where}: {f['message']}")
     L += ["", "A pass means these checks found nothing. It says nothing about whether the design is good:",
-          "look at the shots, then score it with the design-review rubric and `ddr review record`.", ""]
+          "hand the shots to one fresh critic (design-review skill) and `ddr review record` what it read.", ""]
     return "\n".join(L)
 
 
@@ -529,8 +529,8 @@ def run(args):
             print(f"      ... {len(s['findings']) - 6} more in {s['report']}")
     print(f"\n{summary}\nreceipt: {_rel(_gate_dir(project) / 'receipt.json', project)}  shots: {receipt['shots_dir']}")
     if code == 0:
-        print("Next: open the phone and desktop folds, score them (design-review skill), then "
-              f"`ddr review record --run {run_id} --json <file>`.")
+        print("Next: one fresh critic reads the shots (cold read first, then the ask, then defects; design-review "
+              f"skill), then `ddr review record --run {run_id} --json <file>`.")
     elif code == 1:
         print("Next: fix the findings and run the gate again.")
     else:
@@ -591,13 +591,23 @@ def verify(args):
             rp = project / ".design" / "review" / f"{receipt.get('run_id')}.json"
             if not rp.is_file():
                 findings.append(_finding("error", "gate.no-review", f"no review recorded for run {receipt.get('run_id')}. "
-                                         "Score it, then `ddr review record --run latest --json <file>`"))
+                                         "Get one fresh critic's read, then `ddr review record --run latest --json "
+                                         "<file>` (or `ddr review resolve` to close an earlier read's must-fixes)"))
             else:
+                import review
                 try:
-                    rv = json.loads(rp.read_text(encoding="utf-8")).get("verdict")
+                    rec = json.loads(rp.read_text(encoding="utf-8"))
+                    rv = rec.get("verdict")
                 except (OSError, ValueError, AttributeError):
-                    rv = None
-                if rv != "ship":
+                    rec, rv = None, None
+                bad = []
+                if rv == "ship":
+                    # a stored review is read, not trusted: its shape, then the rule on what it says
+                    bad = review._validate_critic(rec) if review.is_critic(rec) else review._validate_scored(rec)
+                if bad:
+                    findings.append(_finding("error", "gate.review-invalid", f"the review for {receipt.get('run_id')} "
+                                             f"does not stand: {bad[0]['message']}"))
+                elif rv != "ship":
                     findings.append(_finding("error", "gate.review-verdict", f"the review for {receipt.get('run_id')} "
                                              f"says {rv!r}, not 'ship'"))
     code = 1 if findings else 0

@@ -13,7 +13,8 @@
     python tools/ddr.py gate run --src src/ --file index.html [--copy copy.txt] [--brand acme]
     python tools/ddr.py gate verify --require-review   # is the receipt current, passing and reviewed
     python tools/ddr.py gate waive --reason "<why>" --src src/
-    python tools/ddr.py review record --run latest --json review.json
+    python tools/ddr.py review record --run latest --json critic.json
+    python tools/ddr.py review resolve --from <run> --evidence "1=<where the fix shows>"
     python tools/ddr.py review show
     python tools/ddr.py shots https://localhost:3000 --full
     python tools/ddr.py ux --file out/index.html      # the countable UX rules at a phone and a desktop size (UX.md)

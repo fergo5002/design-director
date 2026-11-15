@@ -179,6 +179,18 @@ class ShotsEdges(unittest.TestCase):
         rep = json.loads((self.dir / "r.json").read_text())
         self.assertEqual(sorted({r["viewport"] for r in rep["results"]}), ["desktop", "phone"], p.stderr)
 
+    def test_monitor_and_tablet_sizes_render(self):
+        p = node(ROOT / "tools" / "shots.mjs", "--file", FIX / "gate" / "index.html", "--out", self.dir, "--flat",
+                 "--json-out", self.dir / "r.json", "--viewports", "monitor-1920x1080,monitor-2560x1440,tablet-820x1180",
+                 "--no-axe")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        rep = json.loads((self.dir / "r.json").read_text())
+        self.assertEqual(sorted({r["viewport"] for r in rep["results"]}),
+                         ["monitor-1920x1080", "monitor-2560x1440", "tablet-820x1180"])
+        folds = {f.name.split("__")[-3]: png_size(f) for f in self.dir.glob("*__fold.png")}
+        self.assertEqual(folds["monitor-1920x1080"][0] / folds["monitor-1920x1080"][1], 1920 / 1080)
+        self.assertEqual(folds["monitor-2560x1440"][0] / folds["monitor-2560x1440"][1], 2560 / 1440)
+
     def test_every_navigation_failing_is_exit_2(self):
         p = node(ROOT / "tools" / "shots.mjs", "http://127.0.0.1:9/", "--out", self.dir, "--flat",
                  "--json-out", self.dir / "r.json", "--viewports", "phone", "--no-axe")
