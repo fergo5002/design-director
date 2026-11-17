@@ -147,7 +147,9 @@ async (opts = {}) => {
   const q = (a, p) => (a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : null);
   const r1 = (v) => (v === null ? null : Math.round(v * 10) / 10);
   const all = frames.map((f) => f.dt).sort((a, b) => a - b);
-  const refresh = q(all, 0.5) || 16.7;
+  // The display's interval from the idle frames: a page that stalls on every scroll frame must not set its own bar.
+  const idleDt = frames.filter((f) => f.phase === 'idle').map((f) => f.dt).sort((a, b) => a - b);
+  const refresh = (idleDt.length >= 10 ? q(idleDt, 0.5) : q(all, 0.5)) || 16.7;
   const stats = (list) => {
     const s = list.map((f) => f.dt).sort((a, b) => a - b);
     const dropped = s.reduce((n, dt) => n + Math.max(0, Math.round(dt / refresh) - 1), 0);

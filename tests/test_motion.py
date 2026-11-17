@@ -89,6 +89,9 @@ class MotionScroll(unittest.TestCase):
         self.assertTrue(r["scrolled"]["measured"], r["scrolled"])
         self.assertEqual(r["scrolled"]["target"], "#app")
         self.assertEqual(r["verdict"], "NOT SMOOTH", r)
+        # the refresh interval comes from the idle frames, so a stall on every scroll frame counts as dropped frames
+        self.assertLess(r["refreshMs"], 40, r)
+        self.assertGreater(r["phases"]["scroll"]["dropped"], 50, r["phases"]["scroll"])
 
     def test_scroll_asked_for_on_a_page_that_cannot_scroll_says_not_measured(self):
         short = ROOT / "tests" / "fixtures" / "gate" / "index.html"
