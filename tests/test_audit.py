@@ -169,6 +169,12 @@ class AuditReview(unittest.TestCase):
         hits = items(rep, "mac-1512x820", "contrast")
         self.assertTrue(any("Pale grey" in i["text"] and i["stop"] > 0 for i in hits), hits)
 
+    def test_smooth_scroll_behaviour_walks_the_page_not_a_small_box(self):
+        p, rep = report("smooth-scroll.html")
+        desk = vp_of(rep, "mac-1512x820")
+        self.assertEqual(desk["scroller"], "window", desk)
+        self.assertGreaterEqual(desk["stops"], 8, desk)
+
     def test_line_length_counts_characters_on_each_row(self):
         # three full rows of exactly 80 characters: inside 45 to 85
         p, rep = report("line-80.html")

@@ -106,7 +106,9 @@ async (opts = {}) => {
   });
 
   const startY = scrollY;
-  scrollTo(0, 0);
+  // 'instant' everywhere: html{scroll-behavior:smooth} turns a plain scrollTo into a glide that reads as no scroll
+  const jump = (el, top) => (el ? el.scrollTo({ top, behavior: 'instant' }) : window.scrollTo({ top, behavior: 'instant' }));
+  jump(null, 0);
   await sleep(300);
   const tIdle = performance.now();
   await loop('idle', idleMs);
@@ -114,9 +116,12 @@ async (opts = {}) => {
   let step = opts.step || 14, max = 0, tScroll = null, scroller = null, scrollWhy = null;
   if (doScroll) {
     // the window, or else the largest element that scrolls (an app shell with html and body overflow hidden)
-    scrollTo(0, 1e7);
-    const windowScrolls = scrollY > 0;
-    scrollTo(0, 0);
+    // the document when it scrolls, else the largest element that does (an app shell with html and body hidden)
+    const st = getComputedStyle(document.documentElement), sb = getComputedStyle(document.body);
+    const docScrolls = document.documentElement.scrollHeight - innerHeight > 1 && !/hidden|clip/.test(st.overflowY) && !/hidden|clip/.test(sb.overflowY);
+    jump(null, 1e7);
+    const windowScrolls = docScrolls || scrollY > 0;
+    jump(null, 0);
     if (windowScrolls) max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
     else {
       let area = 0;
@@ -125,23 +130,23 @@ async (opts = {}) => {
         if (!/auto|scroll|overlay/.test(st.overflowY) || el.scrollHeight <= el.clientHeight + 1) continue;
         if (el.clientWidth * el.clientHeight > area) { area = el.clientWidth * el.clientHeight; scroller = el; }
       }
-      if (scroller) { scroller.scrollTop = 0; max = scroller.scrollHeight - scroller.clientHeight; }
+      if (scroller) { jump(scroller, 0); max = scroller.scrollHeight - scroller.clientHeight; }
     }
     if (max <= 0) scrollWhy = 'nothing on the page scrolls';
     else {
       if (max / step / 60 * 1000 > maxScrollMs) step = Math.ceil(max / ((maxScrollMs / 1000) * 60));   // a long page in about maxScrollMs
       tScroll = performance.now();
       let y = 0;
-      const to = scroller ? (v) => { scroller.scrollTop = v; } : (v) => scrollTo(0, v);
+      const to = (v) => jump(scroller, v);
       await loop('scroll', maxScrollMs * 2, () => { y += step; to(y); return y < max; });
-      if (scroller) scroller.scrollTop = 0;
+      if (scroller) jump(scroller, 0);
     }
   }
   sampleAnimations();
   await sleep(300);   // let the observers deliver
   mo.disconnect();
   for (const o of observers) o.disconnect();
-  scrollTo(0, startY);
+  jump(null, startY);
 
   // ---- numbers
   const q = (a, p) => (a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : null);

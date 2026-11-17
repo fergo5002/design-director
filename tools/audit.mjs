@@ -173,9 +173,12 @@ for (const name of asked) {
     // What scrolls: the window, or else the largest element that scrolls (an app shell with html and body hidden)
     const dims = await page.evaluate(() => {
       const doc = document.documentElement;
-      scrollTo(0, 1e7);
-      const windowScrolls = scrollY > 0;
-      scrollTo(0, 0);
+      // the document when it scrolls; 'instant' because html{scroll-behavior:smooth} makes scrollTo glide
+      const st = getComputedStyle(document.documentElement), sb = getComputedStyle(document.body);
+      const docScrolls = document.documentElement.scrollHeight - innerHeight > 1 && !/hidden|clip/.test(st.overflowY) && !/hidden|clip/.test(sb.overflowY);
+      scrollTo({ top: 1e7, behavior: 'instant' });
+      const windowScrolls = docScrolls || scrollY > 0;
+      scrollTo({ top: 0, behavior: 'instant' });
       if (windowScrolls) return { h: doc.scrollHeight, vh: doc.clientHeight || innerHeight, inner: null };
       let best = null, area = 0;
       for (const el of document.querySelectorAll('body *')) {
@@ -208,8 +211,8 @@ for (const name of asked) {
       if ((i > 0 || results.length > 0) && left() <= 0) { entry.stoppedAtDeadline = true; break; }
       const offsetY = await page.evaluate((y) => {
         const el = document.querySelector('[data-ddr-scroller]');
-        if (el) { el.scrollTop = y; return el.scrollTop; }
-        window.scrollTo(0, y);
+        if (el) { el.scrollTo({ top: y, behavior: 'instant' }); return el.scrollTop; }
+        window.scrollTo({ top: y, behavior: 'instant' });
         return 0;
       }, y);
       await settle(page, 300);

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smooth scroll behaviour</title>
+<!-- html{scroll-behavior:smooth}: a plain scrollTo() glides, so a probe that reads scrollY straight after it sees 0
+     and decides nothing scrolls. A small FAQ box that scrolls must not be taken for the page. -->
+<style>
+  html { scroll-behavior: smooth }
+  body { margin: 0; font: 18px/1.5 Arial, sans-serif; color: #111 }
+  section { height: 1200px; padding: 40px; box-sizing: border-box; border-bottom: 1px solid #ddd }
+  .faq { height: 120px; overflow-y: auto; border: 1px solid #999; width: 320px }
+  .faq p { margin: 0 0 12px }
+</style>
+</head>
+<body>
+<section id="one"><h1>A long page</h1><div class="faq"><p>Question one?</p><p>Answer one.</p><p>Question two?</p>
+<p>Answer two.</p><p>Question three?</p><p>Answer three.</p><p>Question four?</p><p>Answer four.</p></div></section>
+<section id="two"><p>Two</p></section>
+<section id="three"><p>Three</p></section>
+<section id="four"><p>Four</p></section>
+<section id="five"><p>Five</p></section>
+</body>
+</html>

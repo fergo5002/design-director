@@ -93,6 +93,13 @@ class MotionScroll(unittest.TestCase):
         self.assertLess(r["refreshMs"], 40, r)
         self.assertGreater(r["phases"]["scroll"]["dropped"], 50, r["phases"]["scroll"])
 
+    def test_smooth_scroll_behaviour_does_not_hide_the_page(self):
+        p = motion("--file", ROOT / "tests" / "fixtures" / "audit" / "smooth-scroll.html", "--scroll", "--idle", "500", "--json")
+        r = json.loads(p.stdout)["result"]
+        self.assertTrue(r["scrolled"]["measured"], r["scrolled"])
+        self.assertEqual(r["scrolled"]["target"], "window")
+        self.assertGreater(r["phases"]["scroll"]["frames"], 100)
+
     def test_scroll_asked_for_on_a_page_that_cannot_scroll_says_not_measured(self):
         short = ROOT / "tests" / "fixtures" / "gate" / "index.html"
         p = motion("--file", short, "--scroll", "--idle", "500", "--json")
