@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion stall</title>
+<!-- smooth.html with one fault: a 150 ms block on the main thread the first time the page scrolls past 600 px
+     (a WebGL scene mounting mid-scroll froze Draft v8 for 525 ms, 2026-11-09). -->
+<style>
+  body { margin: 0; font: 18px/1.5 Arial, sans-serif; color: #111 }
+  section { height: 900px; padding: 40px; box-sizing: border-box; border-bottom: 1px solid #ddd }
+  .dot { width: 40px; height: 40px; background: #1b4dff; border-radius: 50%; animation: drift 2s ease-in-out infinite alternate }
+  @keyframes drift { from { transform: translateX(0) } to { transform: translateX(300px) } }
+</style>
+</head>
+<body>
+<section id="hero"><h1>Stall</h1><div class="dot"></div></section>
+<section id="middle"><p>Middle</p></section>
+<section id="end"><p>End</p></section>
+<script>
+  let done = false;
+  addEventListener('scroll', () => {
+    if (done || scrollY < 600) return;
+    done = true;
+    const t = performance.now();
+    while (performance.now() - t < 150) { /* busy */ }
+  });
+</script>
+</body>
+</html>
