@@ -12,7 +12,7 @@
   // clientWidth, never innerWidth: under phone emulation innerWidth stretches to fit wide content (2026-11-11).
   const vw = doc.clientWidth || innerWidth;
   const vh = (document.compatMode === 'CSS1Compat' && doc.clientHeight) || innerHeight;
-  const sx = scrollX, sy = scrollY;
+  const sx = scrollX, sy = scrollY + (opts.offsetY || 0);   // offsetY: the scrollTop of an inner scroller being walked
   const touch = !!opts.touch;
   const out = { 'clip.text': [], 'clip.box': [], offscreen: [], overlap: [], 'tap.small': [], 'tap.close': [],
     'line.length': [], 'text.small': [] };
@@ -104,14 +104,30 @@
   // Is el hidden at (x, y) under something opaque that is not part of it, such as a sticky header or a fixed tab bar
   // that the page scrolls beneath? Covered is not overlapping, and a button under a bar is not crowding it.
   const opaque = (e) => { const s = cs(e); return rgba(s.backgroundColor)[3] > 0.9 || /url\(|gradient/.test(s.backgroundImage); };
-  const covered = (el, x, y) => {
-    if (x < 0 || y < 0 || x >= vw || y >= vh) return false;
+  const coveredBy = (el, x, y) => {
+    if (x < 0 || y < 0 || x >= vw || y >= vh) return null;
     for (const e of document.elementsFromPoint(x, y)) {
-      if (e === el || el.contains(e)) return false;   // el is the first thing there: it shows
+      if (e === el || el.contains(e)) return null;    // el is the first thing there: it shows
       if (e.contains(el)) continue;                    // an ancestor's background sits behind it
-      if (opaque(e)) return true;
+      if (opaque(e)) return e;
     }
-    return false;
+    return null;
+  };
+  const covered = (el, x, y) => !!coveredBy(el, x, y);
+  // The part of a line rect that shows: trimmed above and below by whatever opaque thing covers it (a sticky header,
+  // a fixed tab bar); null when it is wholly covered. Pixels under a header are the header's, not the text's ground.
+  const showing = (el, r) => {
+    let top = Math.max(0, r.top), bottom = Math.min(vh, r.bottom);
+    const left = Math.max(0, r.left), right = Math.min(vw, r.right), x = (left + right) / 2;
+    for (let pass = 0; pass < 3 && bottom - top >= 2; pass++) {
+      const cover = [top + 1, (top + bottom) / 2, bottom - 1].map((y) => coveredBy(el, x, y)).find(Boolean);
+      if (!cover) break;
+      const c = cover.getBoundingClientRect();
+      if (c.top <= top + 1 && c.bottom < bottom) top = c.bottom;
+      else if (c.bottom >= bottom - 1 && c.top > top) bottom = c.top;
+      else return null;
+    }
+    return bottom - top >= 2 && right - left >= 1 ? [left, top, right, bottom] : null;
   };
   const inkCache = new Map();
   const transform = (t, s) => (s.textTransform === 'uppercase' ? t.toUpperCase() : s.textTransform === 'lowercase' ? t.toLowerCase() : t);
@@ -219,13 +235,21 @@
     if (!visibleLines.length) continue;
     // (f) line length: a paragraph of three lines or more
     if (/^(P|LI|DD|BLOCKQUOTE|FIGCAPTION)$/.test(el.tagName) && !out['line.length'].some((i) => i._el === el)) {
-      range.selectNodeContents(el);
-      const all = [...range.getClientRects()].filter((r) => r.width > 1);
+      // each word to the row its rect sits on; a row's characters are its words plus the spaces between them
       const rows = [];
-      for (const r of all) { const c = r.top + r.height / 2; const row = rows.find((x) => Math.abs(x.c - c) < r.height / 2); if (row) row.w = Math.max(row.w, r.right) - Math.min(row.l, r.left); else rows.push({ c, l: r.left, w: r.width }); }
-      const chars = snip(el.innerText, 100000).length;
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      while (tw.nextNode()) {
+        if (!tw.currentNode.nodeValue.trim()) continue;
+        for (const { word, r } of words(tw.currentNode)) {
+          const c = r.top + r.height / 2;
+          const row = rows.find((x) => Math.abs(x.c - c) < r.height / 2);
+          if (row) { row.chars += word.length; row.words += 1; } else rows.push({ c, chars: word.length, words: 1 });
+        }
+      }
+      rows.sort((a, b) => a.c - b.c);
       if (rows.length >= 3) {
-        const per = Math.round(chars / (rows.length - 0.5));
+        const full = rows.slice(0, -1);   // the last row is as short as the paragraph happens to end
+        const per = Math.round(full.reduce((n, r) => n + r.chars + r.words - 1, 0) / full.length);
         const min = vw >= 600 ? 45 : 0;
         if (per > 85 || per < min) {
           const r = el.getBoundingClientRect();
@@ -244,10 +268,12 @@
     const fill = s.webkitTextFillColor;
     let opacity = 1;
     for (let n = el; n && n !== doc; n = n.parentElement) opacity *= parseFloat(cs(n).opacity);
-    runs.push({ selector: sel(el), text: snip(el.innerText || nodes.map((n) => n.nodeValue).join(' '), 60), fg: rgba(fill || s.color),
-      clipText: s.backgroundClip === 'text' || s.webkitBackgroundClip === 'text', opacity, px: fontPx, weight: parseInt(s.fontWeight, 10) || 400,
-      rects: visibleLines.filter(inView).slice(0, 6).map((r) => [Math.max(0, r.left), Math.max(0, r.top), Math.min(vw, r.right), Math.min(vh, r.bottom)]),
-      rect: page(visibleLines[0]) });
+    const shows = visibleLines.filter(inView).slice(0, 6).map((r) => showing(el, r)).filter(Boolean);
+    if (shows.length) {   // wholly under a header or a bar: hidden, so there is no contrast to read
+      runs.push({ selector: sel(el), text: snip(el.innerText || nodes.map((n) => n.nodeValue).join(' '), 60), fg: rgba(fill || s.color),
+        clipText: s.backgroundClip === 'text' || s.webkitBackgroundClip === 'text', opacity, px: fontPx, weight: parseInt(s.fontWeight, 10) || 400,
+        rects: shows, rect: page(visibleLines[0]) });
+    }
   }
 
   // (a) a box that clips whole lines of its own words: a card too short for its copy

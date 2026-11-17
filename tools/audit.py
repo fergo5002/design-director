@@ -49,7 +49,7 @@ def node_ready() -> str | None:
 
 
 def run(target_flag: str, target: str, viewports: str, max_items: int = 5, max_stops: int = 12,
-        storage_state: str | None = None, json_out: pathlib.Path | None = None) -> dict:
+        storage_state: str | None = None, json_out: pathlib.Path | None = None, deadline: float | None = None) -> dict:
     """Run tools/audit.mjs and return its report (exit 2 inside it when it could not look)."""
     with tempfile.TemporaryDirectory() as tmp:
         out = json_out or pathlib.Path(tmp) / "audit.json"
@@ -57,6 +57,8 @@ def run(target_flag: str, target: str, viewports: str, max_items: int = 5, max_s
                 "--max-items", str(max_items), "--max-stops", str(max_stops)]
         if storage_state:
             argv += ["--storage-state", storage_state]
+        if deadline is not None:
+            argv += ["--deadline", str(deadline)]
         try:
             p = subprocess.run(argv, capture_output=True, text=True, timeout=TIMEOUT)
         except subprocess.TimeoutExpired:
@@ -107,6 +109,10 @@ def print_text(rep: dict) -> None:
             print(f"\n{v['viewport']}: could not look ({v['error']})")
             continue
         capped = f", capped from {v.get('stopsWanted')}" if v.get("stopsCapped") else ""
+        if v.get("stoppedAtDeadline"):
+            capped += f", stopped at the deadline ({v.get('stopsWanted')} wanted)"
+        if v.get("scroller") and v["scroller"] != "window":
+            capped += f", scrolling {v['scroller']}"
         n = sum(c["count"] for c in v["checks"].values())
         print(f"\n{v['viewport']}: {v['stops']} scroll stops{capped}, {n} found"
               + (f", HTTP {v['status']}" if v.get("status") and v["status"] >= 400 else "")
@@ -137,6 +143,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-items", type=int, default=5, help="items kept per check per viewport (the rest are counted)")
     ap.add_argument("--max-stops", type=int, default=12, help="scroll stops per viewport, spread evenly when capped")
     ap.add_argument("--storage-state", help="a Playwright storage state (cookies) for a page behind a sign-in")
+    ap.add_argument("--deadline", type=float, help="seconds; stop the walk there and keep what was measured (default 240)")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true", help="exit 1 when anything is found")
     try:
@@ -154,7 +161,7 @@ def main(argv=None) -> int:
         print(f"audit {why}", file=sys.stderr)
         return 2
     flag, target = ("--url", a.url) if a.url else ("--file", str(pathlib.Path(a.file).resolve()))
-    rep = run(flag, target, a.viewports, a.max_items, a.max_stops, a.storage_state)
+    rep = run(flag, target, a.viewports, a.max_items, a.max_stops, a.storage_state, deadline=a.deadline)
     if a.json:
         print(json.dumps(rep, ensure_ascii=False))
     else:

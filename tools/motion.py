@@ -89,7 +89,12 @@ def print_text(rep: dict) -> None:
     if r.get("why"):
         print(f"  {r['why']}")
     print(_phase("idle", r["phases"].get("idle")))
-    print(_phase("scroll", r["phases"].get("scroll")))
+    sc = r.get("scrolled")
+    if sc and not sc.get("measured", True):
+        print(f"  scroll not measured ({sc.get('why') or 'no scroll frames'}); the verdict is the idle phase alone")
+    elif sc is not None:
+        where = f" ({sc['target']})" if sc.get("target") and sc["target"] != "window" else ""
+        print(_phase("scroll", r["phases"].get("scroll")) + where)
     for line in problems(r):
         print(f"  {line}")
     lt = r.get("longTasks") or {}

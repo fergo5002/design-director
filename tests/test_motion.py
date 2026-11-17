@@ -81,6 +81,26 @@ class Motion(unittest.TestCase):
 
 
 @unittest.skipUnless(READY, "needs node, npm install and a playwright chromium")
+class MotionScroll(unittest.TestCase):
+    def test_a_page_that_scrolls_inside_a_container_is_scrolled(self):
+        # html and body hide overflow and #app scrolls; each scroll event blocks the main thread for 120 ms
+        p = motion("--file", ROOT / "tests" / "fixtures" / "audit" / "inner-scroll.html", "--scroll", "--idle", "500", "--json")
+        r = json.loads(p.stdout)["result"]
+        self.assertTrue(r["scrolled"]["measured"], r["scrolled"])
+        self.assertEqual(r["scrolled"]["target"], "#app")
+        self.assertEqual(r["verdict"], "NOT SMOOTH", r)
+
+    def test_scroll_asked_for_on_a_page_that_cannot_scroll_says_not_measured(self):
+        short = ROOT / "tests" / "fixtures" / "gate" / "index.html"
+        p = motion("--file", short, "--scroll", "--idle", "500", "--json")
+        r = json.loads(p.stdout)["result"]
+        self.assertFalse(r["scrolled"]["measured"], r["scrolled"])
+        text = motion("--file", short, "--scroll", "--idle", "500").stdout
+        self.assertIn("scroll not measured", text)
+        self.assertNotIn("None", text)
+
+
+@unittest.skipUnless(READY, "needs node, npm install and a playwright chromium")
 class MotionInstrument(unittest.TestCase):
     def test_a_page_without_animation_frames_does_not_hang(self):
         # A hidden tab never runs requestAnimationFrame. Stub it out and the probe must still come back, degraded.

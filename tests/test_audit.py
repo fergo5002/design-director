@@ -2,10 +2,13 @@
 
 Real Chromium; skipped cleanly when Node, `npm install` or a Playwright Chromium is missing (as in CI).
 """
+import http.server
 import json
 import pathlib
 import subprocess
 import sys
+import threading
+import time
 import unittest
 
 try:
@@ -148,6 +151,68 @@ class Audit(unittest.TestCase):
         found = {(v["viewport"], k): c["items"] for v in self.good["viewports"] for k, c in v["checks"].items() if c["count"]}
         self.assertEqual(found, {})
         self.assertEqual(self.good["total"], 0)
+
+
+@unittest.skipUnless(READY, "needs node, npm install and a playwright chromium")
+class AuditReview(unittest.TestCase):
+    """Faults an independent review reproduced on 2026-11-17, each on its own planted page."""
+
+    def test_text_under_a_solid_sticky_header_is_not_a_contrast_failure(self):
+        p, rep = report("sticky-header.html")
+        for vp in VPS.split(","):
+            self.assertEqual(items(rep, vp, "contrast"), [], vp)
+
+    def test_a_page_that_scrolls_inside_a_container_is_walked(self):
+        p, rep = report("inner-scroll.html")
+        desk = vp_of(rep, "mac-1512x820")
+        self.assertGreaterEqual(desk["stops"], 3, desk)
+        hits = items(rep, "mac-1512x820", "contrast")
+        self.assertTrue(any("Pale grey" in i["text"] and i["stop"] > 0 for i in hits), hits)
+
+    def test_line_length_counts_characters_on_each_row(self):
+        # three full rows of exactly 80 characters: inside 45 to 85
+        p, rep = report("line-80.html")
+        self.assertEqual(items(rep, "mac-1512x820", "line.length"), [])
+
+
+class _Stall(http.server.BaseHTTPRequestHandler):
+    """A page whose web font never answers."""
+    def do_GET(self):
+        if self.path.startswith("/font"):
+            time.sleep(90)
+            return
+        body = (b"<!doctype html><html lang='en'><head><style>@font-face{font-family:Never;src:url(/font.woff2)}"
+                b"body{font:18px Never,Arial}</style></head><body><main><h1>Waiting on a font</h1></main></body></html>")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *a):
+        pass
+
+
+@unittest.skipUnless(READY, "needs node, npm install and a playwright chromium")
+class AuditDeadline(unittest.TestCase):
+    def test_a_font_that_never_answers_does_not_hold_the_audit(self):
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Stall)
+        server.daemon_threads = True
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            t = time.monotonic()
+            p = audit("--url", f"http://127.0.0.1:{server.server_address[1]}/", "--viewports", "mac-1512x820", "--json",
+                      timeout=120)
+            took = time.monotonic() - t
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertLess(took, 45, p.stderr)
+        self.assertEqual(json.loads(p.stdout)["viewports"][0]["stops"], 1)
+
+    def test_an_overall_deadline_stops_the_walk_and_keeps_what_was_measured(self):
+        p, rep = report("faulty.html", "--deadline", "0")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(rep.get("stoppedAtDeadline"), rep)
 
 
 @unittest.skipUnless(READY, "needs node, npm install and a playwright chromium")

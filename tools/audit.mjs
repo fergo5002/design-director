@@ -4,8 +4,11 @@
 // transparent shows what is really behind each text run (a photograph, a gradient, a token that lies).
 //
 //   node tools/audit.mjs --url https://example.com | --file page.html [--viewports mac-1512x820,phone-390x844]
-//        [--json-out report.json] [--max-items 5] [--max-stops 12] [--storage-state state.json]
+//        [--json-out report.json] [--max-items 5] [--max-stops 12] [--storage-state state.json] [--deadline 240]
 //
+// --deadline (seconds) stops the walk where it is and keeps what was measured (stoppedAtDeadline); the first stop of
+// the first viewport is always looked at. A page that scrolls inside a container (html and body hidden, #app
+// scrolling) is walked through its largest scroller.
 // Writes one JSON object {ok, exit, tool: 'audit', target, viewports: [...], total, summary} to --json-out (or
 // stdout). Exit 0 when it could look (findings or not), 2 when it could not. ddr audit (tools/audit.py) decides
 // the rest. Needs `npm install` and `npx playwright install chromium` in this repo.
@@ -23,6 +26,11 @@ const jsonOut = opt('json-out', null);
 const maxItems = Math.max(0, parseInt(opt('max-items', '5'), 10) || 0);
 const maxStops = Math.max(1, parseInt(opt('max-stops', '12'), 10) || 12);
 const storage = opt('storage-state', null);
+const T0 = Date.now();
+const deadlineMs = Math.max(0, parseFloat(opt('deadline', '240')) || 0) * 1000;
+const left = () => deadlineMs - (Date.now() - T0);
+// Every wait on the page is raced against a timer: a page that never answers must not hold the audit.
+const within = (promise, ms, fallback) => Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
 
 function emit(rep) {
   const text = JSON.stringify(rep);
@@ -145,6 +153,11 @@ let looked = 0;
 const errors = [];
 for (const name of asked) {
   const vp = VIEWPORTS[name];
+  if (results.length > 0 && left() <= 0) {
+    results.push({ viewport: name, width: vp.width, height: vp.height, stops: 0, checks: {}, stoppedAtDeadline: true,
+      error: `not looked at: the ${deadlineMs / 1000}s deadline ran out` });
+    continue;
+  }
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.isMobile, hasTouch: vp.hasTouch,
     deviceScaleFactor: vp.isMobile ? 2 : 1, colorScheme: 'light', ...(storage ? { storageState: storage } : {}) });
   const page = await ctx.newPage();
@@ -154,9 +167,29 @@ for (const name of asked) {
     entry.status = res && res.status();
     entry.finalUrl = page.url();
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
+    await page.evaluate(() => Promise.race([document.fonts ? document.fonts.ready : null,
+      new Promise((r) => setTimeout(r, 5000))])).catch(() => {});
     await page.waitForTimeout(800);
-    const dims = await page.evaluate(() => ({ h: document.documentElement.scrollHeight, vh: document.documentElement.clientHeight || innerHeight }));
+    // What scrolls: the window, or else the largest element that scrolls (an app shell with html and body hidden)
+    const dims = await page.evaluate(() => {
+      const doc = document.documentElement;
+      scrollTo(0, 1e7);
+      const windowScrolls = scrollY > 0;
+      scrollTo(0, 0);
+      if (windowScrolls) return { h: doc.scrollHeight, vh: doc.clientHeight || innerHeight, inner: null };
+      let best = null, area = 0;
+      for (const el of document.querySelectorAll('body *')) {
+        const s = getComputedStyle(el);
+        if (!/auto|scroll|overlay/.test(s.overflowY) || el.scrollHeight <= el.clientHeight + 1) continue;
+        const a = el.clientWidth * el.clientHeight;
+        if (a > area) { area = a; best = el; }
+      }
+      if (!best) return { h: doc.scrollHeight, vh: doc.clientHeight || innerHeight, inner: null };
+      document.querySelectorAll('[data-ddr-scroller]').forEach((n) => n.removeAttribute('data-ddr-scroller'));
+      best.setAttribute('data-ddr-scroller', '');
+      return { h: best.scrollHeight, vh: best.clientHeight, inner: best.id ? `#${best.id}` : best.tagName.toLowerCase() };
+    });
+    entry.scroller = dims.inner || 'window';
     const last = Math.max(0, dims.h - dims.vh), step = Math.max(1, Math.floor(dims.vh * 0.85));
     let ys = [];
     for (let y = 0; y < last; y += step) ys.push(y);
@@ -169,11 +202,21 @@ for (const name of asked) {
     }
     const found = Object.fromEntries(CHECKS.map((c) => [c, new Map()]));
     let unmeasured = 0;
+    entry.stopsWanted = entry.stopsWanted || ys.length;
+    let walked = 0;
     for (const [i, y] of ys.entries()) {
-      await page.evaluate((y) => window.scrollTo(0, y), y);
+      if ((i > 0 || results.length > 0) && left() <= 0) { entry.stoppedAtDeadline = true; break; }
+      const offsetY = await page.evaluate((y) => {
+        const el = document.querySelector('[data-ddr-scroller]');
+        if (el) { el.scrollTop = y; return el.scrollTop; }
+        window.scrollTo(0, y);
+        return 0;
+      }, y);
       await settle(page, 300);
       await page.waitForTimeout(i ? 250 : 0);
-      const m = await page.evaluate(`(${PROBE})(${JSON.stringify({ touch: vp.hasTouch, fold: i === 0 })})`);
+      const m = await within(page.evaluate(`(${PROBE})(${JSON.stringify({ touch: vp.hasTouch, fold: i === 0, offsetY })})`), 30000, null);
+      if (!m) { entry.stoppedAtDeadline = true; entry.why = 'the page did not answer the probe in 30s'; break; }
+      walked += 1;
       const stop = m.scrollY;
       if (i === 0) { entry.fold = m.fold; entry.sideways = m.sideways; }
       for (const [check, list] of Object.entries(m.checks)) {
@@ -184,9 +227,9 @@ for (const name of asked) {
       }
       // contrast on the pixels: the same screen with every glyph transparent
       const handle = await page.addStyleTag({ content: HIDE_TEXT });
-      const png = await page.screenshot({ scale: 'css', animations: 'disabled' });
-      await handle.evaluate((n) => n.remove());
-      const c = contrastItems(m.runs, decodePng(png));
+      const png = await page.screenshot({ scale: 'css', animations: 'disabled', timeout: 10000 }).catch(() => null);
+      await handle.evaluate((n) => n.remove()).catch(() => {});
+      const c = png ? contrastItems(m.runs, decodePng(png)) : { items: [], unmeasured: m.runs.length };
       unmeasured += c.unmeasured;
       for (const it of c.items) {
         const key = `${it.selector}|${it.text}|`;
@@ -200,7 +243,7 @@ for (const name of asked) {
       found['page.sideways'].set('page', { selector: 'html', text: '', rect: [0, 0, vp.width + entry.sideways, vp.height], px: entry.sideways,
         widest, score: entry.sideways, stop: 0, detail: `the page scrolls sideways by ${entry.sideways}px (${widest.join(', ')})` });
     }
-    entry.stops = ys.length;
+    entry.stops = walked;
     entry.contrastUnmeasured = unmeasured;
     for (const check of CHECKS) {
       const all = [...found[check].values()].sort((a, b) => (b.score || 0) - (a.score || 0));
@@ -217,5 +260,6 @@ for (const name of asked) {
 await browser.close();
 const total = results.reduce((n, v) => n + Object.values(v.checks).reduce((m, c) => m + c.count, 0), 0);
 const exit = looked ? 0 : 2;
-emit({ ok: exit === 0, exit, tool: 'audit', target, viewports: results, total, errors,
+const stoppedAtDeadline = results.some((v) => v.stoppedAtDeadline);
+emit({ ok: exit === 0, exit, tool: 'audit', target, viewports: results, total, errors, stoppedAtDeadline,
   summary: looked ? `${total} measured problems over ${looked} viewports` : `could not look: ${errors.join('; ')}` });

@@ -82,9 +82,9 @@ async (opts = {}) => {
   let rafs = 0, lastSample = 0;
   const sections = [...document.querySelectorAll('section, [data-section]')].filter((s) => s.getBoundingClientRect().height > 0);
   const name = (s) => s.id || s.getAttribute('aria-labelledby') || (s.className && String(s.className).split(' ')[0]) || s.tagName.toLowerCase();
-  const at = (y) => {
-    const mid = y + innerHeight / 2;
-    for (const s of sections) { const r = s.getBoundingClientRect(); const top = r.top + scrollY; if (mid >= top && mid < top + r.height) return name(s); }
+  const at = () => {
+    const mid = innerHeight / 2;
+    for (const s of sections) { const r = s.getBoundingClientRect(); if (mid >= r.top && mid < r.bottom) return name(s); }
     return '(between sections)';
   };
   const loop = (phase, ms, step) => new Promise((resolve) => {
@@ -95,7 +95,7 @@ async (opts = {}) => {
     const f = (now) => {
       if (over) return;
       rafs += 1;
-      if (last !== null) frames.push({ dt: now - last, phase, at: phase === 'scroll' ? at(scrollY) : 'idle' });
+      if (last !== null) frames.push({ dt: now - last, phase, at: phase === 'scroll' ? at() : 'idle' });
       last = now;
       if (now - lastSample > 250) { lastSample = now; sampleAnimations(); }
       const more = step ? step() : true;
@@ -111,13 +111,31 @@ async (opts = {}) => {
   const tIdle = performance.now();
   await loop('idle', idleMs);
   const idleFrames = frames.length;
-  let step = opts.step || 14, max = 0, tScroll = null;
+  let step = opts.step || 14, max = 0, tScroll = null, scroller = null, scrollWhy = null;
   if (doScroll) {
-    max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-    if (max / step / 60 * 1000 > maxScrollMs) step = Math.ceil(max / ((maxScrollMs / 1000) * 60));   // a long page in about maxScrollMs
-    tScroll = performance.now();
-    let y = 0;
-    if (max > 0) await loop('scroll', maxScrollMs * 2, () => { y += step; scrollTo(0, y); return y < max; });
+    // the window, or else the largest element that scrolls (an app shell with html and body overflow hidden)
+    scrollTo(0, 1e7);
+    const windowScrolls = scrollY > 0;
+    scrollTo(0, 0);
+    if (windowScrolls) max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    else {
+      let area = 0;
+      for (const el of document.querySelectorAll('body *')) {
+        const st = getComputedStyle(el);
+        if (!/auto|scroll|overlay/.test(st.overflowY) || el.scrollHeight <= el.clientHeight + 1) continue;
+        if (el.clientWidth * el.clientHeight > area) { area = el.clientWidth * el.clientHeight; scroller = el; }
+      }
+      if (scroller) { scroller.scrollTop = 0; max = scroller.scrollHeight - scroller.clientHeight; }
+    }
+    if (max <= 0) scrollWhy = 'nothing on the page scrolls';
+    else {
+      if (max / step / 60 * 1000 > maxScrollMs) step = Math.ceil(max / ((maxScrollMs / 1000) * 60));   // a long page in about maxScrollMs
+      tScroll = performance.now();
+      let y = 0;
+      const to = scroller ? (v) => { scroller.scrollTop = v; } : (v) => scrollTo(0, v);
+      await loop('scroll', maxScrollMs * 2, () => { y += step; to(y); return y < max; });
+      if (scroller) scroller.scrollTop = 0;
+    }
   }
   sampleAnimations();
   await sleep(300);   // let the observers deliver
@@ -162,7 +180,9 @@ async (opts = {}) => {
     refreshMs: r1(refresh),
     viewport: `${innerWidth}x${innerHeight}@${devicePixelRatio}`,
     headless: /HeadlessChrome/.test(navigator.userAgent) || navigator.webdriver === true,
-    idleMs, scrolled: doScroll ? { px: max, step, ms: tScroll ? ms(performance.now() - tScroll - 300) : 0 } : null,
+    idleMs,
+    scrolled: doScroll ? { measured: max > 0 && frames.some((f) => f.phase === 'scroll'), target: scroller ? sel(scroller) : 'window',
+      px: max, step, ms: tScroll ? ms(performance.now() - tScroll - 300) : 0, ...(scrollWhy ? { why: scrollWhy } : {}) } : null,
     phases, sections: sectionRows, idleFrames,
     longTasks: { count: lt.length, over100: lt.filter((e) => e.duration > 100).length, items: lt.slice(0, 5).map((e) => ({ at: ms(e.startTime - t0), ms: ms(e.duration) })) },
     longAnimationFramesOver100ms: loafLong.slice(0, 5).map((e) => ({ at: ms(e.startTime - t0), ms: ms(e.duration) })),
