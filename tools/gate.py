@@ -551,6 +551,12 @@ def measured_lines(m):
         counts = ", ".join(f"{k} {v}" for k, v in a.get("counts", {}).items()) or "nothing measured wrong"
         L.append(f"      audit    {a.get('total', 0)} found at {','.join(a.get('viewports', []))}: {counts}  ({a.get('report')})")
         L += [f"               {w}" for w in a.get("worst", [])]
+        first = next(((vp, f) for vp, f in (a.get("fold") or {}).items() if f), None)
+        if first:
+            vp, f = first
+            big = f.get("largest") or {}
+            L.append(f"               first screen at {vp}: {f.get('headings')} headings, {f.get('primaryActions')} filled "
+                     f"actions, {f.get('words')} words, largest {big.get('px')}px {big.get('selector', '')} \"{big.get('text', '')}\"")
     mo = m.get("motion") or {}
     if mo.get("exit") == 2:
         L.append(f"      motion   could not measure: {mo.get('why', '')}")

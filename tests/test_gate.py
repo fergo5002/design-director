@@ -430,6 +430,7 @@ class Measured(Base):
         self.assertIn("contrast", worst[1])
         self.assertIn("NOT SMOOTH", out)
         self.assertIn("150", out)
+        self.assertIn('first screen at mac-1512x820: 1 headings, 1 filled actions, 40 words, largest 56px h1 "Draft"', out)
         md = (self.proj / ".design" / "gate" / r["run_id"] / "report.md").read_text()
         self.assertIn("July", md)
 

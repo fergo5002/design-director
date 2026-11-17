@@ -30,6 +30,12 @@
   .spacer { height: 1600px }
   .stack h2 { font-size: 48px; margin: 0 }
   .stack p { font-size: 28px; margin: 0 }
+  /* Bars that content scrolls under: covered is not overlapping, and a button under a bar is not crowding it */
+  header { position: sticky; top: 0; background: #fff; z-index: 2 }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; padding: 8px 16px; background: #fff;
+            border-top: 1px solid #999; z-index: 2 }
+  .tabbar a { display: inline-block; min-width: 96px; min-height: 48px; padding: 12px; box-sizing: border-box; color: #111 }
+  .rows button { display: block; min-height: 48px; margin: 0 0 24px; padding: 12px 20px; border: 1px solid #555; background: #fff; color: #111 }
 </style>
 </head>
 <body>
@@ -47,6 +53,10 @@
 <p class="tiny">Terms apply</p>
 <div class="spacer"></div>
 <section class="stack"><h2>Cash for stock</h2><p>Paid back from sales</p></section>
+<div class="rows"><button>Connect a bank</button><button>Add a shop</button><button>Invite a teammate</button><button>Upload a statement</button>
+<button>Ask a question</button><button>See the fee</button><button>Draw</button><button>Repay</button></div>
+<div style="height: 120px"></div>
 </main>
+<nav class="tabbar"><a href="#home">Home</a><a href="#line">Line</a><a href="#help">Help</a></nav>
 </body>
 </html>

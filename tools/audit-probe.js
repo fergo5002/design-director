@@ -101,6 +101,18 @@
   const dot = document.createElement('canvas'); dot.width = dot.height = 1;
   const dc = dot.getContext('2d', { willReadFrequently: true });
   const rgba = (c) => { dc.clearRect(0, 0, 1, 1); dc.fillStyle = '#000'; dc.fillStyle = c; dc.fillRect(0, 0, 1, 1); const d = dc.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2], +(d[3] / 255).toFixed(3)]; };
+  // Is el hidden at (x, y) under something opaque that is not part of it, such as a sticky header or a fixed tab bar
+  // that the page scrolls beneath? Covered is not overlapping, and a button under a bar is not crowding it.
+  const opaque = (e) => { const s = cs(e); return rgba(s.backgroundColor)[3] > 0.9 || /url\(|gradient/.test(s.backgroundImage); };
+  const covered = (el, x, y) => {
+    if (x < 0 || y < 0 || x >= vw || y >= vh) return false;
+    for (const e of document.elementsFromPoint(x, y)) {
+      if (e === el || el.contains(e)) return false;   // el is the first thing there: it shows
+      if (e.contains(el)) continue;                    // an ancestor's background sits behind it
+      if (opaque(e)) return true;
+    }
+    return false;
+  };
   const inkCache = new Map();
   const transform = (t, s) => (s.textTransform === 'uppercase' ? t.toUpperCase() : s.textTransform === 'lowercase' ? t.toLowerCase() : t);
   const ink = (rect, word, s) => {
@@ -286,6 +298,8 @@
       const a = core(A.r), b = core(B.r);
       const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
       if (w <= 2 || h <= 2) continue;
+      const cx = Math.max(a.left, b.left) + w / 2, cy = Math.max(a.top, b.top) + h / 2;
+      if (covered(A.el, cx, cy) || covered(B.el, cx, cy)) continue;
       const key = sel(A.el) + '|' + sel(B.el);
       if (seenPair.has(key)) continue;
       seenPair.add(key);
@@ -313,7 +327,8 @@
         }
         return { el, r, v: visiblePart(r, el) };
       })
-      .filter((t) => t.v && inView(t.v) && !tiny(t.r));
+      .filter((t) => t.v && inView(t.v) && !tiny(t.r))
+      .filter((t) => !covered(t.el, (Math.max(0, t.v.left) + Math.min(vw, t.v.right)) / 2, (Math.max(0, t.v.top) + Math.min(vh, t.v.bottom)) / 2));
     const name = (el) => snip(el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || '', 40);   // aria-label is the accessible name when set
     for (const t of targets) {
       if (t.r.width < 44 || t.r.height < 44) {
@@ -329,6 +344,10 @@
         const dx = Math.max(0, b.r.left - a.r.right, a.r.left - b.r.right), dy = Math.max(0, b.r.top - a.r.bottom, a.r.top - b.r.bottom);
         const gap = Math.max(dx, dy);
         if (gap >= 8) continue;
+        if (!dx && !dy) {   // the boxes cross: if one lies under the other's bar there, that is scrolling, not crowding
+          const cx = (Math.max(a.r.left, b.r.left) + Math.min(a.r.right, b.r.right)) / 2, cy = (Math.max(a.r.top, b.r.top) + Math.min(a.r.bottom, b.r.bottom)) / 2;
+          if (covered(a.el, cx, cy) || covered(b.el, cx, cy)) continue;
+        }
         out['tap.close'].push({ selector: sel(a.el), text: name(a.el), rect: page(a.r), gap: Math.round(gap * 10) / 10,
           other: { selector: sel(b.el), text: name(b.el) }, score: 8 - gap, detail: `${Math.round(gap)}px from ${sel(b.el)} (8px apart at least)` });
       }
