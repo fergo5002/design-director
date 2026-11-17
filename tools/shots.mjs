@@ -5,7 +5,7 @@
 //
 //   node tools/shots.mjs https://example.com [more urls] [--file page.html ...] [--out .design/shots]
 //                        [--flat] [--full] [--viewports mac-1512x820,phone-390x844] [--no-axe] [--dark]
-//                        [--json-out report.json]
+//                        [--json-out report.json] [--storage-state state.json]
 //
 // --flat writes into --out itself instead of a timestamped folder inside it. --json-out writes
 // one JSON object {ok, exit, tool, findings, summary, outDir, viewports, results}. Each result
@@ -33,7 +33,9 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const many = (n) => args.flatMap((a, i) => (a === `--${n}` && args[i + 1] ? [args[i + 1]] : []));
-const VALUED = ['--out', '--viewports', '--file', '--json-out'];
+const VALUED = ['--out', '--viewports', '--file', '--json-out', '--storage-state'];
+// --storage-state: a Playwright storage state (cookies and local storage) for a page behind a sign-in
+const storage = opt('storage-state', null);
 const urls = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 const files = many('file');
 const jsonOut = opt('json-out', null);
@@ -55,6 +57,7 @@ if (!urls.length && !files.length) {
 }
 const goneFiles = files.filter((f) => !fs.existsSync(f));
 if (goneFiles.length) cannot(`not found: ${goneFiles.join(', ')}`);
+if (storage && !fs.existsSync(storage)) cannot(`no such storage state: ${storage}`);
 
 const DEFAULT = 'mac-1512x820,mac-1440x780,desktop-1440x900,monitor-1920x1080,phone-390x844,phone-landscape-844x390,small-320x568';
 const asked = opt('viewports', DEFAULT).split(',').map((v) => v.trim()).filter(Boolean);
@@ -277,6 +280,7 @@ for (const target of targets) {
       const ctx = await browser.newContext({
         viewport: { width: vp.width, height: vp.height }, isMobile: vp.isMobile, hasTouch: vp.hasTouch,
         deviceScaleFactor: vp.isMobile ? 2 : 1, reducedMotion: motion, colorScheme: flag('dark') ? 'dark' : 'light',
+        ...(storage ? { storageState: storage } : {}),
       });
       const page = await ctx.newPage();
       const consoleErrors = [];

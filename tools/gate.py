@@ -248,16 +248,22 @@ def step_brand(ctx):
         return _cannot("brand", f"could not run: brand lint crashed ({type(e).__name__}: {e})")
 
 
-def _run_shots(ctx, targets, json_out):
-    """Run tools/shots.mjs and return (exit code, stderr tail). Tests replace this."""
-    node = shutil.which("node")
-    if not node:
-        return 2, "node is not installed"
-    argv = [node, str(TOOLS / "shots.mjs")]
+def _shots_argv(ctx, targets, json_out):
+    argv = [shutil.which("node") or "node", str(TOOLS / "shots.mjs")]
     for kind, t in targets:
         argv += ["--file", t] if kind == "file" else [t]
     argv += ["--out", str(ctx["run_dir"] / "shots"), "--flat", "--json-out", str(json_out),
              "--viewports", ",".join(ctx["viewports"])]
+    if ctx.get("storage_state"):
+        argv += ["--storage-state", str(ctx["storage_state"])]
+    return argv
+
+
+def _run_shots(ctx, targets, json_out):
+    """Run tools/shots.mjs and return (exit code, stderr tail). Tests replace this."""
+    if not shutil.which("node"):
+        return 2, "node is not installed"
+    argv = _shots_argv(ctx, targets, json_out)
     try:
         p = subprocess.run(argv, cwd=str(ctx["project"]), capture_output=True, text=True, timeout=RENDER_TIMEOUT)
     except subprocess.TimeoutExpired:
@@ -277,6 +283,8 @@ def step_render(ctx):
     gone = [str(f) for f in ctx["files"] if not pathlib.Path(f).is_file()]
     if gone:
         return _cannot("render", f"could not run: {', '.join(gone)} does not exist")
+    if ctx.get("storage_state") and not pathlib.Path(ctx["storage_state"]).is_file():
+        return _cannot("render", f"could not run: no storage state at {ctx['storage_state']}")
     json_out = ctx["run_dir"] / "shots.json"
     rc, err = _run_shots(ctx, targets, json_out)
     rep = None
@@ -437,6 +445,122 @@ def overall(steps):
 VERDICTS = {0: "pass", 1: "findings", 2: "could-not-run"}
 
 
+# ---------------------------------------------------------------- measured, report only
+
+# ddr audit and ddr motion run after the seven steps. They are saved with the run and summarised, and they never
+# change the verdict: what passes or fails is still the seven steps alone.
+MEASURE_VIEWPORTS = ["mac-1512x820", "mac-1440x780", "phone-390x844"]
+MEASURE_TARGETS = 3          # audit at most this many targets; motion runs on the first
+MOTION_IDLE_MS, MOTION_SCROLL_MS = 2000, 8000
+MEASURE_TIMEOUT = 600
+
+
+def _measure_argv(ctx, kind, target, json_out):
+    flag, where = target
+    argv = [shutil.which("node") or "node", str(TOOLS / f"{kind}.mjs"), "--file" if flag == "file" else "--url", where,
+            "--json-out", str(json_out)]
+    if kind == "audit":
+        argv += ["--viewports", ",".join(ctx["measure_viewports"]), "--max-items", "5"]
+    else:
+        argv += ["--viewport", desktop_viewport(ctx["measure_viewports"]) or "mac-1512x820", "--scroll",
+                 "--idle", str(MOTION_IDLE_MS), "--max-scroll", str(MOTION_SCROLL_MS)]
+    if ctx.get("storage_state"):
+        argv += ["--storage-state", str(ctx["storage_state"])]
+    return argv
+
+
+def _run_measure(ctx, kind, target, json_out):
+    """Run tools/audit.mjs or tools/motion.mjs and return (exit code, stderr tail). Tests replace this."""
+    if not shutil.which("node"):
+        return 2, "node is not installed"
+    try:
+        p = subprocess.run(_measure_argv(ctx, kind, target, json_out), cwd=str(ctx["project"]), capture_output=True,
+                           text=True, timeout=MEASURE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return 2, f"{kind} took longer than {MEASURE_TIMEOUT}s"
+    except OSError as e:
+        return 2, str(e)
+    return p.returncode, (p.stderr or "")[-400:]
+
+
+def _read(path):
+    try:
+        return json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def measure(ctx):
+    """Run audit on each target and motion on the first; write audit.json and motion.json; return the summary."""
+    import audit as audit_mod
+    import motion as motion_mod
+    targets = [("url", u) for u in ctx["urls"]] + [("file", str(f)) for f in ctx["files"]]
+    out = {}
+    reports = []
+    for i, t in enumerate(targets[:MEASURE_TARGETS]):
+        part = ctx["run_dir"] / f"audit-{i}.json"
+        try:
+            rc, err = _run_measure(ctx, "audit", t, part)
+        except Exception as e:  # a crash here must never touch the verdict
+            rc, err = 2, f"{type(e).__name__}: {e}"
+        rep = _read(part) or audit_mod._cannot(f"audit wrote no report (exit {rc}). {err.strip()}".strip())
+        part.unlink(missing_ok=True)
+        reports.append(rep)
+    combined = {"tool": "audit", "targets": reports}
+    _write_json(ctx["run_dir"] / "audit.json", combined)
+    looked = [r for r in reports if r.get("exit") != 2]
+    merged = {"viewports": [dict(v, viewport=(f"{r.get('target', '')} " if len(looked) > 1 else "") + v["viewport"])
+                            for r in looked for v in r.get("viewports", []) if not v.get("error")]}
+    out["audit"] = {"exit": 0 if looked else 2, "total": sum(r.get("total", 0) for r in looked),
+                    "counts": audit_mod.counts(merged), "worst": audit_mod.worst(merged, 3),
+                    "viewports": ctx["measure_viewports"], "report": _rel(ctx["run_dir"] / "audit.json", ctx["project"]),
+                    "fold": {v["viewport"]: v.get("fold") for v in merged["viewports"]}}
+    if len(targets) > MEASURE_TARGETS:
+        out["audit"]["targets_skipped"] = len(targets) - MEASURE_TARGETS
+    if not looked:
+        out["audit"]["why"] = "; ".join(str(r.get("summary", "")) for r in reports)[:300]
+    mpath = ctx["run_dir"] / "motion.json"
+    try:
+        rc, err = _run_measure(ctx, "motion", targets[0], mpath)
+    except Exception as e:
+        rc, err = 2, f"{type(e).__name__}: {e}"
+    mrep = _read(mpath)
+    if mrep is None:
+        mrep = motion_mod._cannot(f"motion wrote no report (exit {rc}). {err.strip()}".strip())
+        _write_json(mpath, mrep)
+    r = mrep.get("result") or {}
+    scroll = (r.get("phases") or {}).get("scroll") or {}
+    out["motion"] = {"exit": mrep.get("exit", 2), "verdict": r.get("verdict"), "viewport": mrep.get("viewport"),
+                     "scroll_p95": scroll.get("p95"), "worst_ms": scroll.get("worst"),
+                     "long_tasks": (r.get("longTasks") or {}).get("count"), "problems": motion_mod.problems(r)[:3] if r else [],
+                     "report": _rel(mpath, ctx["project"])}
+    if mrep.get("exit") == 2:
+        out["motion"]["why"] = str(mrep.get("summary", ""))[:300]
+    return out
+
+
+def measured_lines(m):
+    """The short printed summary: counts and the three worst for audit, the verdict and its reasons for motion."""
+    if m.get("skipped"):
+        return [f"  measured  skipped   {m['skipped']}"]
+    L = ["  measured  report only, never changes the verdict"]
+    a = m.get("audit") or {}
+    if a.get("exit") == 2:
+        L.append(f"      audit    could not look: {a.get('why', '')}")
+    else:
+        counts = ", ".join(f"{k} {v}" for k, v in a.get("counts", {}).items()) or "nothing measured wrong"
+        L.append(f"      audit    {a.get('total', 0)} found at {','.join(a.get('viewports', []))}: {counts}  ({a.get('report')})")
+        L += [f"               {w}" for w in a.get("worst", [])]
+    mo = m.get("motion") or {}
+    if mo.get("exit") == 2:
+        L.append(f"      motion   could not measure: {mo.get('why', '')}")
+    else:
+        L.append(f"      motion   {mo.get('verdict')} at {mo.get('viewport')}: scroll p95 {mo.get('scroll_p95')} ms, "
+                 f"worst {mo.get('worst_ms')} ms, {mo.get('long_tasks')} long tasks  ({mo.get('report')})")
+        L += [f"               {p}" for p in mo.get("problems", [])]
+    return L
+
+
 # ---------------------------------------------------------------- run
 
 def _write_json(path, data):
@@ -463,6 +587,9 @@ def _report_md(receipt, steps):
         for f in s["findings"][:20]:
             where = _where(f)
             L.append(f"  - {f['severity']} {f['rule']}{where}: {f['message']}")
+    if receipt.get("measured"):
+        L += ["", "Measured (ddr audit and ddr motion, report only):", ""]
+        L += [f"    {line.strip()}" for line in measured_lines(receipt["measured"])]
     L += ["", "A pass means these checks found nothing. It says nothing about whether the design is good:",
           "hand the shots to one fresh critic (design-review skill) and `ddr review record` what it read.", ""]
     return "\n".join(L)
@@ -477,9 +604,11 @@ def run(args):
     files = [pathlib.Path(f).resolve() for f in args.file]
     src = [pathlib.Path(s).resolve() for s in args.src] or list(files)
     viewports = [v.strip() for v in (args.viewports or ",".join(DEFAULT_VIEWPORTS)).split(",") if v.strip()]
+    state = str(pathlib.Path(args.storage_state).resolve()) if args.storage_state else None
     ctx = {"project": project, "src": src, "urls": list(args.url), "files": files,
            "brand": args.brand or _project_brand(project), "copy": args.copy, "viewports": viewports,
-           "no_render": bool(args.no_render), "why": args.why, "run_dir": run_dir}
+           "no_render": bool(args.no_render), "why": args.why, "run_dir": run_dir, "storage_state": state,
+           "measure_viewports": viewports if args.viewports else list(MEASURE_VIEWPORTS)}
     steps = []
     for name in STEPS:
         try:
@@ -494,6 +623,15 @@ def run(args):
         steps.append(s)
     code = overall(steps)
     render = next(s for s in steps if s["name"] == "render")
+    if args.no_measure:
+        measured = {"skipped": "--no-measure"}
+    elif render["skipped"] is not None or render["exit"] == 2:
+        measured = {"skipped": f"render did not run ({render['skipped'] or 'exit 2'}), so there is no page to measure"}
+    else:
+        try:
+            measured = measure(ctx)
+        except Exception as e:  # report only: a broken measure is said, never a changed verdict
+            measured = {"skipped": f"could not run: measure crashed ({type(e).__name__}: {e})"}
     receipt = {
         "version": 1, "run_id": run_id, "ran_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "project": project.as_posix(), "brand": ctx["brand"],
@@ -504,6 +642,7 @@ def run(args):
         "viewports": viewports, "shots_dir": _rel(run_dir / "shots", project),
         "rendered": render["skipped"] is None and render["exit"] in (0, 1),
         "verdict": VERDICTS[code], "exit": code, "waived": None,
+        "measured": measured,
     }
     _write_json(run_dir / "receipt.json", receipt)
     _write_json(_gate_dir(project) / "receipt.json", receipt)
@@ -511,7 +650,7 @@ def run(args):
     summary = f"gate {VERDICTS[code]}: " + ", ".join(
         f"{s['name']} {'skipped' if s['skipped'] else s['exit']}" for s in steps)
     report = {"ok": code == 0, "exit": code, "tool": "gate", "findings": all_findings, "summary": summary,
-              "receipt": receipt}
+              "receipt": receipt, "measured": measured}
     _write_json(run_dir / "report.json", report)
     (run_dir / "report.md").write_text(_report_md(receipt, steps), encoding="utf-8")
     if args.json:
@@ -527,6 +666,8 @@ def run(args):
             print(f"      {f['severity']:5} {f['rule']}{where} {f['message']}")
         if len(s["findings"]) > 6:
             print(f"      ... {len(s['findings']) - 6} more in {s['report']}")
+    for line in measured_lines(measured):
+        print(line)
     print(f"\n{summary}\nreceipt: {_rel(_gate_dir(project) / 'receipt.json', project)}  shots: {receipt['shots_dir']}")
     if code == 0:
         print("Next: one fresh critic reads the shots (cold read first, then the ask, then defects; design-review "
@@ -691,6 +832,9 @@ def _parser():
     r.add_argument("--viewports", help="comma list (default: " + ",".join(DEFAULT_VIEWPORTS) + ")")
     r.add_argument("--no-render", action="store_true")
     r.add_argument("--why", help="with --no-render: why this artefact is not rendered")
+    r.add_argument("--storage-state", help="a Playwright storage state (cookies) for pages behind a sign-in; "
+                                           "every browser step opens with it")
+    r.add_argument("--no-measure", action="store_true", help="skip the report-only ddr audit and ddr motion")
     r.add_argument("--json", action="store_true")
     v = sub.add_parser("verify", help="is the receipt current, passing and (optionally) reviewed")
     v.add_argument("--project", default=".")

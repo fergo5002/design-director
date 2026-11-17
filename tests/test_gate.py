@@ -40,6 +40,35 @@ def render_report(text="Hello there\nBook a sauna", smallest=16, sizes=4, words=
     return {"ok": True, "exit": 0, "tool": "shots", "findings": [], "summary": "", "results": results}
 
 
+def audit_report(items=None, exit_code=0):
+    """What tools/audit.mjs writes: one viewport here, with the checks given as {check: [items]}."""
+    items = items if items is not None else {
+        "clip.text": [{"selector": "main > span.word", "text": "July", "rect": [16, 344, 427, 222], "stop": 0,
+                       "score": 26, "detail": "descenders cut by 26px by main > div.mask"}],
+        "tap.small": [{"selector": "button.ic", "text": "Menu", "rect": [16, 8, 30, 30], "stop": 0, "score": 14,
+                       "detail": "30x30px, under 44x44"}] * 2,
+        "contrast": [{"selector": "p.faint", "text": "Indicative", "rect": [16, 638, 177, 20], "stop": 0,
+                      "score": 2.8, "detail": "1.67:1 on the pixels behind it (needs 4.5:1)"}]}
+    checks = {k: {"count": len(v), "cut": 0, "items": v} for k, v in items.items()}
+    total = sum(c["count"] for c in checks.values())
+    return {"ok": exit_code == 0, "exit": exit_code, "tool": "audit", "target": "file:///x/index.html", "total": total,
+            "summary": f"{total} measured problems",
+            "viewports": [{"viewport": "mac-1512x820", "stops": 4, "checks": checks,
+                           "fold": {"headings": 1, "primaryActions": 1, "words": 40,
+                                    "largest": {"px": 56, "selector": "h1", "text": "Draft"}}}]}
+
+
+def motion_report(verdict="NOT SMOOTH", exit_code=0):
+    return {"ok": exit_code == 0, "exit": exit_code, "tool": "motion", "target": "file:///x/index.html",
+            "viewport": "mac-1512x820", "summary": verdict,
+            "result": {"verdict": verdict, "refreshMs": 16.7, "headless": True,
+                       "phases": {"idle": {"frames": 90, "p50": 16.7, "p95": 16.8, "p99": 16.8, "worst": 16.8, "dropped": 0, "ok": True},
+                                  "scroll": {"frames": 134, "p50": 16.7, "p95": 16.8, "p99": 16.8, "worst": 150, "dropped": 8, "ok": False}},
+                       "sections": {"middle": {"frames": 65, "p95": 16.8, "worst": 150, "ok": False}},
+                       "longTasks": {"count": 1, "over100": 1, "items": [{"at": 2500, "ms": 150}]},
+                       "layoutShift": {"total": 0, "count": 0, "sources": []}, "layoutAnimations": []}}
+
+
 class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -56,8 +85,13 @@ class Base(unittest.TestCase):
         self.shots.start()
         self.render = render_report()
         self.render_rc = 0
+        self.measured = {"audit": audit_report(), "motion": motion_report()}
+        self.measure_calls = []
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=self.fake_measure)
+        self.measure.start()
 
     def tearDown(self):
+        self.measure.stop()
         self.shots.stop()
         self.env.stop()
         for k, v in self.saved.items():
@@ -71,6 +105,14 @@ class Base(unittest.TestCase):
         pathlib.Path(json_out).parent.mkdir(parents=True, exist_ok=True)
         pathlib.Path(json_out).write_text(json.dumps(self.render), encoding="utf-8")
         return self.render_rc, ""
+
+    def fake_measure(self, ctx, kind, target, json_out):
+        self.measure_calls.append((kind, target))
+        rep = self.measured.get(kind)
+        if rep is not None:
+            pathlib.Path(json_out).parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(json_out).write_text(json.dumps(rep), encoding="utf-8")
+        return (rep or {}).get("exit", 2), ""
 
     def stub(self, name, **funcs):
         mod = types.ModuleType(name)
@@ -356,6 +398,97 @@ class Render(Base):
         rc, r, _ = self.run_gate("--viewports", "desktop,phone")
         self.assertEqual(r["viewports"], ["desktop", "phone"])
         self.assertEqual(rc, 0)
+
+
+class Measured(Base):
+    """ddr audit and ddr motion run with the gate, report only: saved with the run, summarised, never the verdict."""
+
+    def test_findings_do_not_change_a_pass(self):
+        rc, r, out = self.run_gate()
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(r["verdict"], "pass")
+        self.assertEqual([s["name"] for s in r["steps"]], list(gate.STEPS))
+
+    def test_saved_with_the_run(self):
+        rc, r, _ = self.run_gate()
+        run_dir = self.proj / ".design" / "gate" / r["run_id"]
+        self.assertEqual(json.loads((run_dir / "audit.json").read_text())["targets"][0]["tool"], "audit")
+        self.assertEqual(json.loads((run_dir / "motion.json").read_text())["tool"], "motion")
+        m = r["measured"]
+        self.assertEqual(m["audit"]["counts"], {"clip.text": 1, "contrast": 1, "tap.small": 2})
+        self.assertEqual(m["audit"]["total"], 4)
+        self.assertEqual(m["motion"]["verdict"], "NOT SMOOTH")
+        self.assertEqual(m["audit"]["report"], f".design/gate/{r['run_id']}/audit.json")
+
+    def test_summary_names_counts_and_the_three_worst(self):
+        rc, r, out = self.run_gate()
+        self.assertIn("report only", out)
+        self.assertIn("clip.text 1", out)
+        worst = r["measured"]["audit"]["worst"]
+        self.assertEqual(len(worst), 3)
+        self.assertIn("July", worst[0])            # cut words first
+        self.assertIn("contrast", worst[1])
+        self.assertIn("NOT SMOOTH", out)
+        self.assertIn("150", out)
+        md = (self.proj / ".design" / "gate" / r["run_id"] / "report.md").read_text()
+        self.assertIn("July", md)
+
+    def test_could_not_measure_is_said_but_does_not_fail_the_gate(self):
+        self.measured = {"audit": None, "motion": None}
+        rc, r, out = self.run_gate()
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(r["measured"]["audit"]["exit"], 2)
+        self.assertIn("could not", out)
+
+    def test_skipped_without_a_render(self):
+        rc, r, _ = self.run_gate("--no-render", "--why", "a PDF", target=False)
+        self.assertEqual(self.measure_calls, [])
+        self.assertIn("render", r["measured"]["skipped"])
+
+    def test_no_measure_flag_skips_them(self):
+        rc, r, _ = self.run_gate("--no-measure")
+        self.assertEqual(self.measure_calls, [])
+        self.assertEqual(r["measured"]["skipped"], "--no-measure")
+        self.assertEqual(rc, 0)
+
+    def test_audit_uses_the_gate_viewports_when_named(self):
+        captured = {}
+        orig = self.fake_measure
+
+        def spy(ctx, kind, target, json_out):
+            captured[kind] = ctx["measure_viewports"]
+            return orig(ctx, kind, target, json_out)
+        self.measure.stop()
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=spy)
+        self.measure.start()
+        self.render = render_report(viewports=["mac-1512x820", "phone-390x844"])
+        self.run_gate("--viewports", "mac-1512x820,phone-390x844")
+        self.assertEqual(captured["audit"], ["mac-1512x820", "phone-390x844"])
+        self.run_gate()
+        self.assertEqual(captured["audit"], ["mac-1512x820", "mac-1440x780", "phone-390x844"])
+
+    def test_json_output_carries_the_summary(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            gate.main(["run", "--project", str(self.proj), "--src", str(self.proj / "src"),
+                       "--file", str(self.proj / "index.html"), "--json"])
+        rep = json.loads(buf.getvalue())
+        self.assertEqual(rep["measured"]["motion"]["verdict"], "NOT SMOOTH")
+
+    def test_storage_state_reaches_every_browser_step(self):
+        state = self.proj / "state.json"
+        state.write_text('{"cookies": [], "origins": []}')
+        ctx = {"storage_state": str(state), "run_dir": self.proj, "viewports": ["mac-1512x820"],
+               "measure_viewports": ["mac-1512x820"], "project": self.proj}
+        self.assertIn(str(state), gate._shots_argv(ctx, [("url", "http://localhost:8000/x")], self.proj / "s.json"))
+        for kind in ("audit", "motion"):
+            argv = gate._measure_argv(ctx, kind, ("url", "http://localhost:8000/x"), self.proj / "m.json")
+            self.assertEqual(argv[argv.index("--storage-state") + 1], str(state))
+
+    def test_missing_storage_state_is_exit_2(self):
+        rc, r, _ = self.run_gate("--storage-state", str(self.proj / "nope.json"))
+        self.assertEqual(self.step(r, "render")["exit"], 2)
+        self.assertEqual(rc, 2)
 
 
 class Viewports(unittest.TestCase):
@@ -679,6 +812,13 @@ class RealRender(unittest.TestCase):
         self.assertEqual(rc, 0, buf.getvalue())
         shots = list((self.proj / r["shots_dir"]).glob("*__fold.png"))
         self.assertTrue(any("__phone-390x844__" in p.name for p in shots))
+        # the report-only measures ran for real, on the gate's own viewports, and are saved with the run
+        m = r["measured"]
+        self.assertEqual(m["audit"]["exit"], 0, m)
+        self.assertEqual(m["audit"]["viewports"], ["desktop-1440x900", "phone-390x844"])
+        self.assertIn(m["motion"]["verdict"], ("SMOOTH", "NOT SMOOTH"), m)
+        self.assertTrue((self.proj / m["audit"]["report"]).is_file())
+        self.assertIn("report only", buf.getvalue())
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(gate.main(["verify", "--project", str(self.proj)]), 0)
         (site / "styles.css").write_text((site / "styles.css").read_text() + "\n/* edited */\n")
