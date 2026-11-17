@@ -401,7 +401,17 @@ class Render(Base):
 
 
 class Measured(Base):
-    """ddr audit and ddr motion run with the gate, report only: saved with the run, summarised, never the verdict."""
+    """ddr audit and ddr motion trail the gate: the gate's own files are written exactly as on main first, then the
+    measures write audit.json, motion.json and measured.json. They never rewrite the receipt or the report, and they
+    never change the exit code."""
+
+    def m(self, r):
+        return json.loads((self.proj / ".design" / "gate" / r["run_id"] / "measured.json").read_text())
+
+    def spy(self, fn):
+        self.measure.stop()
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=fn)
+        self.measure.start()
 
     def test_findings_do_not_change_a_pass(self):
         rc, r, out = self.run_gate()
@@ -409,12 +419,58 @@ class Measured(Base):
         self.assertEqual(r["verdict"], "pass")
         self.assertEqual([s["name"] for s in r["steps"]], list(gate.STEPS))
 
+    def test_the_receipt_and_report_carry_nothing_of_the_measures(self):
+        rc, r, _ = self.run_gate()
+        self.assertNotIn("measured", r)
+        rep = json.loads((self.proj / ".design" / "gate" / r["run_id"] / "report.json").read_text())
+        self.assertEqual(set(rep), {"ok", "exit", "tool", "findings", "summary", "receipt"})
+        self.assertNotIn("measured", rep["receipt"])
+
+    def test_receipt_and_report_are_on_disk_and_final_before_measuring_starts(self):
+        seen = {}
+
+        def look(ctx, kind, target, json_out):
+            d = self.proj / ".design" / "gate"
+            rid = json.loads((d / "receipt.json").read_text())["run_id"]
+            seen[kind] = {n: (d / rid / n).read_bytes() for n in ("receipt.json", "report.json", "report.md")}
+            seen[kind]["top"] = (d / "receipt.json").read_bytes()
+            return self.fake_measure(ctx, kind, target, json_out)
+        self.spy(look)
+        rc, r, _ = self.run_gate()
+        run_dir = self.proj / ".design" / "gate" / r["run_id"]
+        for name in ("receipt.json", "report.json", "report.md"):     # not one byte changed by measuring
+            self.assertEqual(seen["audit"][name], (run_dir / name).read_bytes(), name)
+        self.assertEqual(seen["audit"]["top"], (self.proj / ".design" / "gate" / "receipt.json").read_bytes())
+
+    def test_each_gate_file_is_written_once(self):
+        writes = []
+        real = gate._write_json
+
+        def count(path, data):
+            writes.append(pathlib.Path(path).name if pathlib.Path(path).parent.name != "gate" else "top-" + pathlib.Path(path).name)
+            return real(path, data)
+        with mock.patch.object(gate, "_write_json", side_effect=count):
+            self.run_gate()
+        for name in ("receipt.json", "top-receipt.json", "report.json"):
+            self.assertEqual(writes.count(name), 1, writes)
+
+    def test_a_run_killed_while_measuring_leaves_a_complete_run(self):
+        def killed(ctx, kind, target, json_out):
+            raise KeyboardInterrupt   # stands in for the process dying mid-measure
+        self.spy(killed)
+        with self.assertRaises(KeyboardInterrupt), contextlib.redirect_stdout(io.StringIO()):
+            gate.main(["run", "--project", str(self.proj), "--src", str(self.proj / "src"),
+                       "--file", str(self.proj / "index.html")])
+        r = json.loads((self.proj / ".design" / "gate" / "receipt.json").read_text())
+        self.assertTrue((self.proj / ".design" / "gate" / r["run_id"] / "report.json").is_file())
+        self.assertEqual(self.call("verify", "--project", str(self.proj))[0], 0)
+
     def test_saved_with_the_run(self):
         rc, r, _ = self.run_gate()
         run_dir = self.proj / ".design" / "gate" / r["run_id"]
         self.assertEqual(json.loads((run_dir / "audit.json").read_text())["targets"][0]["tool"], "audit")
         self.assertEqual(json.loads((run_dir / "motion.json").read_text())["tool"], "motion")
-        m = r["measured"]
+        m = self.m(r)
         self.assertEqual(m["audit"]["counts"], {"clip.text": 1, "contrast": 1, "tap.small": 2})
         self.assertEqual(m["audit"]["total"], 4)
         self.assertEqual(m["motion"]["verdict"], "NOT SMOOTH")
@@ -424,79 +480,57 @@ class Measured(Base):
         rc, r, out = self.run_gate()
         self.assertIn("report only", out)
         self.assertIn("clip.text 1", out)
-        worst = r["measured"]["audit"]["worst"]
+        worst = self.m(r)["audit"]["worst"]
         self.assertEqual(len(worst), 3)
         self.assertIn("July", worst[0])            # cut words first
         self.assertIn("contrast", worst[1])
         self.assertIn("NOT SMOOTH", out)
         self.assertIn("150", out)
         self.assertIn('first screen at mac-1512x820: 1 headings, 1 filled actions, 40 words, largest 56px h1 "Draft"', out)
-        md = (self.proj / ".design" / "gate" / r["run_id"] / "report.md").read_text()
-        self.assertIn("July", md)
+        self.assertLess(out.index("receipt:"), out.index("report only"))   # the gate's own lines first
 
     def test_could_not_measure_is_said_but_does_not_fail_the_gate(self):
         self.measured = {"audit": None, "motion": None}
         rc, r, out = self.run_gate()
         self.assertEqual(rc, 0, out)
-        self.assertEqual(r["measured"]["audit"]["exit"], 2)
+        self.assertEqual(self.m(r)["audit"]["exit"], 2)
         self.assertIn("could not", out)
 
     def test_skipped_without_a_render(self):
         rc, r, _ = self.run_gate("--no-render", "--why", "a PDF", target=False)
         self.assertEqual(self.measure_calls, [])
-        self.assertIn("render", r["measured"]["skipped"])
+        self.assertIn("render", self.m(r)["skipped"])
 
     def test_no_measure_flag_skips_them(self):
         rc, r, _ = self.run_gate("--no-measure")
         self.assertEqual(self.measure_calls, [])
-        self.assertEqual(r["measured"]["skipped"], "--no-measure")
+        self.assertEqual(self.m(r)["skipped"], "--no-measure")
         self.assertEqual(rc, 0)
 
-    def test_audit_uses_the_gate_viewports_when_named(self):
+    def test_audit_measures_the_phone_first(self):
         captured = {}
-        orig = self.fake_measure
 
         def spy(ctx, kind, target, json_out):
             captured[kind] = ctx["measure_viewports"]
-            return orig(ctx, kind, target, json_out)
-        self.measure.stop()
-        self.measure = mock.patch.object(gate, "_run_measure", side_effect=spy)
-        self.measure.start()
+            return self.fake_measure(ctx, kind, target, json_out)
+        self.spy(spy)
         self.render = render_report(viewports=["mac-1512x820", "phone-390x844"])
         self.run_gate("--viewports", "mac-1512x820,phone-390x844")
-        self.assertEqual(captured["audit"], ["mac-1512x820", "phone-390x844"])
+        self.assertEqual(captured["audit"], ["phone-390x844", "mac-1512x820"])
         self.run_gate()
-        self.assertEqual(captured["audit"], ["mac-1512x820", "mac-1440x780", "phone-390x844"])
+        self.assertEqual(captured["audit"], ["phone-390x844", "mac-1512x820", "mac-1440x780"])
 
     def test_an_edit_made_while_measuring_makes_the_receipt_stale(self):
         def edit(ctx, kind, target, json_out):
             if kind == "audit":
                 (self.proj / "src" / "app.css").write_text("body { color: #222; }\n", encoding="utf-8")
             return self.fake_measure(ctx, kind, target, json_out)
-        self.measure.stop()
-        self.measure = mock.patch.object(gate, "_run_measure", side_effect=edit)
-        self.measure.start()
+        self.spy(edit)
         rc, r, _ = self.run_gate()
         self.assertEqual(rc, 0)
         vrc, out = self.call("verify", "--project", str(self.proj))
         self.assertEqual(vrc, 1, out)
         self.assertIn("changed since the gate ran", out)
-
-    def test_the_receipt_is_written_before_measuring(self):
-        seen = {}
-
-        def look(ctx, kind, target, json_out):
-            path = self.proj / ".design" / "gate" / "receipt.json"
-            seen[kind] = json.loads(path.read_text()) if path.exists() else None
-            return self.fake_measure(ctx, kind, target, json_out)
-        self.measure.stop()
-        self.measure = mock.patch.object(gate, "_run_measure", side_effect=look)
-        self.measure.start()
-        rc, r, _ = self.run_gate()
-        self.assertIsNotNone(seen["audit"])
-        self.assertEqual(seen["audit"]["run_id"], r["run_id"])
-        self.assertIn("src/app.css", seen["audit"]["inputs"])
-        self.assertEqual(seen["audit"]["verdict"], "pass")
 
     def test_measuring_stops_at_one_budget_and_keeps_what_it_has(self):
         clock = [1000.0]
@@ -504,23 +538,39 @@ class Measured(Base):
         def slow(ctx, kind, target, json_out):
             clock[0] += gate.MEASURE_BUDGET + 1   # the audit eats the whole budget
             return self.fake_measure(ctx, kind, target, json_out)
-        self.measure.stop()
-        self.measure = mock.patch.object(gate, "_run_measure", side_effect=slow)
-        self.measure.start()
+        self.spy(slow)
         with mock.patch.object(gate, "_clock", side_effect=lambda: clock[0]):
             rc, r, out = self.run_gate()
         self.assertEqual(rc, 0, out)
-        self.assertEqual(r["measured"]["audit"]["total"], 4)
+        m = self.m(r)
+        self.assertEqual(m["audit"]["total"], 4)
         self.assertEqual([k for k, _ in self.measure_calls], ["audit"])
-        self.assertIn("measuring stopped at the budget", r["measured"]["motion"]["why"])
+        self.assertIn("measuring stopped at the budget", m["motion"]["why"])
         self.assertIn("measuring stopped at the budget", out)
 
-    def test_each_measure_gets_only_what_is_left_of_the_budget(self):
-        ctx = {"measure_viewports": ["mac-1512x820"], "storage_state": None, "measure_deadline": 1000.0 + 30}
+    def test_motion_keeps_its_share_of_the_budget(self):
+        ctx = {"measure_viewports": ["phone-390x844"], "storage_state": None, "measure_deadline": 1000.0 + 60}
         with mock.patch.object(gate, "_clock", return_value=1000.0):
-            self.assertAlmostEqual(gate._remaining(ctx), 30)
             argv = gate._measure_argv(ctx, "audit", ("file", "/x.html"), self.proj / "a.json")
-        self.assertEqual(argv[argv.index("--deadline") + 1], "25")
+            self.assertEqual(argv[argv.index("--deadline") + 1], str(60 - gate.MOTION_RESERVE - 5))
+            self.assertAlmostEqual(gate._remaining(ctx, "audit"), 60 - gate.MOTION_RESERVE)
+            self.assertAlmostEqual(gate._remaining(ctx, "motion"), 60)
+        self.assertGreaterEqual(gate.MOTION_RESERVE, 20)
+
+    def test_viewports_not_looked_at_are_named_not_summed(self):
+        rep = audit_report()
+        rep["viewports"].insert(0, {"viewport": "phone-390x844", "stops": 3, "checks": rep["viewports"][0]["checks"]})
+        rep["viewports"][1].update(stoppedAtDeadline=True)
+        rep["viewports"].append({"viewport": "mac-1440x780", "stops": 0, "checks": {}, "stoppedAtDeadline": True,
+                                 "error": "not looked at: the 40s deadline ran out"})
+        rep["stoppedAtDeadline"] = True
+        self.measured["audit"] = rep
+        rc, r, out = self.run_gate()
+        a = self.m(r)["audit"]
+        self.assertEqual(a["looked_at"], ["phone-390x844", "mac-1512x820"])
+        self.assertEqual(a["not_looked_at"], ["mac-1440x780"])
+        self.assertIn("not looked at: mac-1440x780", out)
+        self.assertNotIn("found at phone-390x844,mac-1512x820,mac-1440x780", out)
 
     def test_scroll_not_measured_is_said_not_printed_as_none(self):
         rep = motion_report(verdict="SMOOTH")
@@ -532,13 +582,27 @@ class Measured(Base):
         self.assertNotIn("None", out)
         self.assertIn("scroll not measured", out)
 
-    def test_json_output_carries_the_summary(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+    def test_json_output_is_still_one_object_and_the_summary_is_in_measured_json(self):
+        buf, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err):
             gate.main(["run", "--project", str(self.proj), "--src", str(self.proj / "src"),
                        "--file", str(self.proj / "index.html"), "--json"])
         rep = json.loads(buf.getvalue())
-        self.assertEqual(rep["measured"]["motion"]["verdict"], "NOT SMOOTH")
+        self.assertNotIn("measured", rep)
+        self.assertEqual(self.m(rep["receipt"])["motion"]["verdict"], "NOT SMOOTH")
+
+    def test_temp_files_are_unique_per_process(self):
+        seen = []
+        real = os.replace
+
+        def spy(src, dst):
+            seen.append(pathlib.Path(src).name)
+            return real(src, dst)
+        with mock.patch.object(gate.os, "replace", side_effect=spy):
+            gate._write_json(self.proj / "a.json", {})
+            gate._write_json(self.proj / "a.json", {})
+        self.assertEqual(len(set(seen)), 2, seen)
+        self.assertTrue(all(str(os.getpid()) in n for n in seen), seen)
 
     def test_storage_state_reaches_every_browser_step(self):
         state = self.proj / "state.json"
@@ -554,6 +618,67 @@ class Measured(Base):
         rc, r, _ = self.run_gate("--storage-state", str(self.proj / "nope.json"))
         self.assertEqual(self.step(r, "render")["exit"], 2)
         self.assertEqual(rc, 2)
+
+
+JOB = pathlib.Path.home() / ".claude" / "skills" / "design-director" / "tools" / "job.py"
+try:
+    from test_shots import READY as _BROWSER
+except ImportError:
+    from tests.test_shots import READY as _BROWSER
+
+
+@unittest.skipUnless(_BROWSER and JOB.is_file(), "needs a playwright chromium and the design-director skill's job.py")
+class JobVerifyDuringMeasure(unittest.TestCase):
+    """The reviewer's blocker: job.py verify read a run whose report.json was not yet written and said ready to ship.
+    A tweak with a baseline gets a new fault (9px text); verify, run mid-measure and after a run killed mid-measure,
+    must say there is a new fault."""
+
+    PAGE = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" '
+            'content="width=device-width,initial-scale=1"><title>T</title><style>body{{font:18px/1.5 Arial;margin:16px}}'
+            '</style></head><body><main><h1>Tweak</h1><p>Body copy.</p>{extra}</main></body></html>')
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.proj = pathlib.Path(self.tmp.name)
+        (self.proj / "site").mkdir()
+        self.page = self.proj / "site" / "index.html"
+        self.page.write_text(self.PAGE.format(extra=""))
+        self.env = dict(os.environ, DESIGN_GATE_DDR=f"{sys.executable} {TOOLS / 'ddr.py'}", DDR_HOME=str(self.proj / "home"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def job(self, *args):
+        return subprocess.run([sys.executable, str(JOB), "--project", str(self.proj), *args], capture_output=True,
+                              text=True, env=self.env, timeout=120)
+
+    def gate(self, measure):
+        argv = ["run", "--project", str(self.proj), "--src", str(self.proj / "site"), "--file", str(self.page),
+                "--viewports", "phone-390x844"]
+        with mock.patch.dict(os.environ, {"DDR_HOME": str(self.proj / "home")}), \
+                mock.patch.object(gate, "_run_measure", side_effect=measure), contextlib.redirect_stdout(io.StringIO()):
+            return gate.main(argv)
+
+    def test_verify_sees_the_new_fault_while_measuring_and_after_a_kill(self):
+        self.assertEqual(self.job("start", "--lane", "tweak", "--surface", "landing", "--ask", "tweak test").returncode, 0)
+        self.assertEqual(self.gate(lambda *a: (2, "")), 0)
+        b = self.job("baseline")
+        self.assertEqual(b.returncode, 0, b.stdout + b.stderr)
+        self.page.write_text(self.PAGE.format(extra='<p style="font-size:9px">Terms apply</p>'))
+        during = {}
+
+        def mid(ctx, kind, target, json_out):
+            during["verify"] = self.job("verify")
+            raise KeyboardInterrupt      # then the run is killed mid-measure
+        with self.assertRaises(KeyboardInterrupt):
+            self.gate(mid)
+        v = during["verify"]
+        self.assertEqual(v.returncode, 1, v.stdout)
+        self.assertIn("new fault", v.stdout)
+        after = self.job("verify")
+        self.assertEqual(after.returncode, 1, after.stdout)
+        self.assertIn("new fault", after.stdout)
+        self.assertNotIn("ready to ship", after.stdout.lower())
 
 
 class Viewports(unittest.TestCase):
@@ -878,9 +1003,9 @@ class RealRender(unittest.TestCase):
         shots = list((self.proj / r["shots_dir"]).glob("*__fold.png"))
         self.assertTrue(any("__phone-390x844__" in p.name for p in shots))
         # the report-only measures ran for real, on the gate's own viewports, and are saved with the run
-        m = r["measured"]
+        m = json.loads((self.proj / ".design" / "gate" / r["run_id"] / "measured.json").read_text())
         self.assertEqual(m["audit"]["exit"], 0, m)
-        self.assertEqual(m["audit"]["viewports"], ["desktop-1440x900", "phone-390x844"])
+        self.assertEqual(m["audit"]["looked_at"], ["phone-390x844", "desktop-1440x900"])
         self.assertIn(m["motion"]["verdict"], ("SMOOTH", "NOT SMOOTH"), m)
         self.assertTrue((self.proj / m["audit"]["report"]).is_file())
         self.assertIn("report only", buf.getvalue())

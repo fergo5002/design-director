@@ -96,7 +96,8 @@ class SignedIn(unittest.TestCase):
         texts = list((proj / r["shots_dir"]).glob("*__text.txt"))
         self.assertTrue(texts, buf.getvalue())
         self.assertIn("Your dashboard", texts[0].read_text())
-        self.assertEqual(r["measured"]["audit"]["exit"], 0, r["measured"])
+        m = json.loads((proj / ".design" / "gate" / r["run_id"] / "measured.json").read_text())
+        self.assertEqual(m["audit"]["exit"], 0, m)
 
 
 if __name__ == "__main__":
