@@ -468,6 +468,70 @@ class Measured(Base):
         self.run_gate()
         self.assertEqual(captured["audit"], ["mac-1512x820", "mac-1440x780", "phone-390x844"])
 
+    def test_an_edit_made_while_measuring_makes_the_receipt_stale(self):
+        def edit(ctx, kind, target, json_out):
+            if kind == "audit":
+                (self.proj / "src" / "app.css").write_text("body { color: #222; }\n", encoding="utf-8")
+            return self.fake_measure(ctx, kind, target, json_out)
+        self.measure.stop()
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=edit)
+        self.measure.start()
+        rc, r, _ = self.run_gate()
+        self.assertEqual(rc, 0)
+        vrc, out = self.call("verify", "--project", str(self.proj))
+        self.assertEqual(vrc, 1, out)
+        self.assertIn("changed since the gate ran", out)
+
+    def test_the_receipt_is_written_before_measuring(self):
+        seen = {}
+
+        def look(ctx, kind, target, json_out):
+            path = self.proj / ".design" / "gate" / "receipt.json"
+            seen[kind] = json.loads(path.read_text()) if path.exists() else None
+            return self.fake_measure(ctx, kind, target, json_out)
+        self.measure.stop()
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=look)
+        self.measure.start()
+        rc, r, _ = self.run_gate()
+        self.assertIsNotNone(seen["audit"])
+        self.assertEqual(seen["audit"]["run_id"], r["run_id"])
+        self.assertIn("src/app.css", seen["audit"]["inputs"])
+        self.assertEqual(seen["audit"]["verdict"], "pass")
+
+    def test_measuring_stops_at_one_budget_and_keeps_what_it_has(self):
+        clock = [1000.0]
+
+        def slow(ctx, kind, target, json_out):
+            clock[0] += gate.MEASURE_BUDGET + 1   # the audit eats the whole budget
+            return self.fake_measure(ctx, kind, target, json_out)
+        self.measure.stop()
+        self.measure = mock.patch.object(gate, "_run_measure", side_effect=slow)
+        self.measure.start()
+        with mock.patch.object(gate, "_clock", side_effect=lambda: clock[0]):
+            rc, r, out = self.run_gate()
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(r["measured"]["audit"]["total"], 4)
+        self.assertEqual([k for k, _ in self.measure_calls], ["audit"])
+        self.assertIn("measuring stopped at the budget", r["measured"]["motion"]["why"])
+        self.assertIn("measuring stopped at the budget", out)
+
+    def test_each_measure_gets_only_what_is_left_of_the_budget(self):
+        ctx = {"measure_viewports": ["mac-1512x820"], "storage_state": None, "measure_deadline": 1000.0 + 30}
+        with mock.patch.object(gate, "_clock", return_value=1000.0):
+            self.assertAlmostEqual(gate._remaining(ctx), 30)
+            argv = gate._measure_argv(ctx, "audit", ("file", "/x.html"), self.proj / "a.json")
+        self.assertEqual(argv[argv.index("--deadline") + 1], "25")
+
+    def test_scroll_not_measured_is_said_not_printed_as_none(self):
+        rep = motion_report(verdict="SMOOTH")
+        rep["result"]["phases"]["scroll"] = {"frames": 0, "p50": None, "p95": None, "p99": None, "worst": None,
+                                             "dropped": 0, "ok": True}
+        rep["result"]["scrolled"] = {"measured": False, "why": "nothing on the page scrolls"}
+        self.measured["motion"] = rep
+        rc, r, out = self.run_gate()
+        self.assertNotIn("None", out)
+        self.assertIn("scroll not measured", out)
+
     def test_json_output_carries_the_summary(self):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
