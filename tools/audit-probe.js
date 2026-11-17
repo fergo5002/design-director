@@ -337,10 +337,21 @@
       }
     }
     const listRow = (a, b) => a.r.width >= vw * 0.8 && b.r.width >= vw * 0.8;   // full-width rows stacked: a list, not a mis-tap
+    // Cells of one control (a tab bar, a segmented control), each a full 44 by 44, may touch.
+    const cells = (a, b) => a.el.parentElement === b.el.parentElement && Math.min(a.r.width, a.r.height, b.r.width, b.r.height) >= 44;
+    // The distance between a fixed or sticky target and scrolling content changes as you scroll: not a layout fact.
+    const pinCache = new Map();
+    const pinned = (el) => {
+      if (pinCache.has(el)) return pinCache.get(el);
+      let p = false;
+      for (let n = el; n && n !== doc; n = n.parentElement) if (/fixed|sticky/.test(cs(n).position)) { p = true; break; }
+      pinCache.set(el, p);
+      return p;
+    };
     for (let i = 0; i < targets.length; i++) {
       for (let j = i + 1; j < targets.length; j++) {
         const a = targets[i], b = targets[j];
-        if (a.el.contains(b.el) || b.el.contains(a.el) || listRow(a, b)) continue;
+        if (a.el.contains(b.el) || b.el.contains(a.el) || listRow(a, b) || cells(a, b) || pinned(a.el) !== pinned(b.el)) continue;
         const dx = Math.max(0, b.r.left - a.r.right, a.r.left - b.r.right), dy = Math.max(0, b.r.top - a.r.bottom, a.r.top - b.r.bottom);
         const gap = Math.max(dx, dy);
         if (gap >= 8) continue;
