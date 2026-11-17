@@ -370,7 +370,8 @@ class Viewports(unittest.TestCase):
         self.assertEqual(default, gate.DEFAULT_VIEWPORTS)
 
     def test_every_default_is_a_known_viewport(self):
-        src = self.shots_source()
+        # the table moved to viewports.mjs so shots, audit and motion share one list of sizes
+        src = (pathlib.Path(gate.__file__).parent / "viewports.mjs").read_text(encoding="utf-8")
         table = src[src.index("const VIEWPORTS = {"):src.index("};", src.index("const VIEWPORTS = {"))]
         known = set(re.findall(r"^\s*'?([a-z][a-z0-9-]*)'?\s*:", table, re.M))
         for v in gate.DEFAULT_VIEWPORTS + ["monitor-2560x1440", "tablet-820x1180"]:

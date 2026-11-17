@@ -596,6 +596,8 @@ def main(argv=None):
         return _run_py("review", rest)
     if cmd == "ux":
         return subprocess.call([sys.executable, str(TOOLS / "ux_probe.py"), *rest], cwd=os.getcwd())
+    if cmd in ("audit", "motion"):
+        return _run_py(cmd, rest)
     if cmd == "crop":
         if not _which("node"):
             print("crop needs Node.js 18+ and `npm install` in the design-director repo"); return 2
