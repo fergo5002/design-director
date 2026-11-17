@@ -5,7 +5,7 @@
 //
 //   node tools/shots.mjs https://example.com [more urls] [--file page.html ...] [--out .design/shots]
 //                        [--flat] [--full] [--viewports mac-1512x820,phone-390x844] [--no-axe] [--dark]
-//                        [--json-out report.json]
+//                        [--json-out report.json] [--storage-state state.json]
 //
 // --flat writes into --out itself instead of a timestamped folder inside it. --json-out writes
 // one JSON object {ok, exit, tool, findings, summary, outDir, viewports, results}. Each result
@@ -27,12 +27,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { VIEWPORTS } from './viewports.mjs';
 
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const many = (n) => args.flatMap((a, i) => (a === `--${n}` && args[i + 1] ? [args[i + 1]] : []));
-const VALUED = ['--out', '--viewports', '--file', '--json-out'];
+const VALUED = ['--out', '--viewports', '--file', '--json-out', '--storage-state'];
+// --storage-state: a Playwright storage state (cookies and local storage) for a page behind a sign-in
+const storage = opt('storage-state', null);
 const urls = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 const files = many('file');
 const jsonOut = opt('json-out', null);
@@ -54,25 +57,8 @@ if (!urls.length && !files.length) {
 }
 const goneFiles = files.filter((f) => !fs.existsSync(f));
 if (goneFiles.length) cannot(`not found: ${goneFiles.join(', ')}`);
+if (storage && !fs.existsSync(storage)) cannot(`no such storage state: ${storage}`);
 
-const VIEWPORTS = {
-  'mac-1512x820': { width: 1512, height: 820, isMobile: false, hasTouch: false },
-  'mac-1440x780': { width: 1440, height: 780, isMobile: false, hasTouch: false },
-  'desktop-1440x900': { width: 1440, height: 900, isMobile: false, hasTouch: false },
-  // a big screen: more columns or larger type, never a narrow strip in blank space
-  'monitor-1920x1080': { width: 1920, height: 1080, isMobile: false, hasTouch: false },
-  'monitor-2560x1440': { width: 2560, height: 1440, isMobile: false, hasTouch: false },
-  'tablet-820x1180': { width: 820, height: 1180, isMobile: true, hasTouch: true },
-  'phone-390x844': { width: 390, height: 844, isMobile: true, hasTouch: true },
-  'phone-landscape-844x390': { width: 844, height: 390, isMobile: true, hasTouch: true },
-  'small-320x568': { width: 320, height: 568, isMobile: true, hasTouch: true },
-  // the original names, kept working
-  desktop: { width: 1440, height: 900, isMobile: false, hasTouch: false },
-  laptop: { width: 1280, height: 720, isMobile: false, hasTouch: false },
-  tablet: { width: 820, height: 1180, isMobile: true, hasTouch: true },
-  phone: { width: 390, height: 844, isMobile: true, hasTouch: true },
-  small: { width: 320, height: 568, isMobile: true, hasTouch: true },
-};
 const DEFAULT = 'mac-1512x820,mac-1440x780,desktop-1440x900,monitor-1920x1080,phone-390x844,phone-landscape-844x390,small-320x568';
 const asked = opt('viewports', DEFAULT).split(',').map((v) => v.trim()).filter(Boolean);
 const unknown = asked.filter((v) => !VIEWPORTS[v]);
@@ -294,6 +280,7 @@ for (const target of targets) {
       const ctx = await browser.newContext({
         viewport: { width: vp.width, height: vp.height }, isMobile: vp.isMobile, hasTouch: vp.hasTouch,
         deviceScaleFactor: vp.isMobile ? 2 : 1, reducedMotion: motion, colorScheme: flag('dark') ? 'dark' : 'light',
+        ...(storage ? { storageState: storage } : {}),
       });
       const page = await ctx.newPage();
       const consoleErrors = [];

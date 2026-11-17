@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit clean twin</title>
+<!-- faulty.html with each fault fixed. It keeps the hidden sideways scroll and a tight-leaded mask (with a word that
+     has no descender) so the checks are shown to measure ink, not to flag a style. -->
+<style>
+  html, body { margin: 0; overflow-x: hidden }
+  body { font: 18px/1.5 Arial, Helvetica, sans-serif; color: #111; background: #fff }
+  main { padding: 0 16px }
+  button, input { font: inherit }
+  h1 { font-size: 56px; margin: 8px 0 }
+  .icons { display: flex; gap: 12px; padding: 8px 16px }
+  .ic { width: 48px; height: 48px; padding: 0; border: 1px solid #555; background: #fff; color: #111 }
+  .sub { font-size: 32px; font-weight: 400; margin: 0 }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0 }
+  .btn { display: inline-block; min-height: 48px; padding: 12px 20px; background: #1b4dff; color: #fff;
+         border: 0; text-decoration: none; box-sizing: border-box }
+  .quiet { background: transparent; color: #1b4dff; border: 1px solid #1b4dff }
+  .mask { overflow: hidden; line-height: .9; font-size: clamp(80px, 16vw, 240px) }
+  .mask.open { line-height: 1.25 }
+  .card { overflow: hidden; width: 300px; max-width: 100%; border: 1px solid #999; margin: 16px 0 }
+  .faint { color: #555 }
+  .photo { background: #000 linear-gradient(#1b2a3a, #0e1620); padding: 20px }
+  .over { color: #fff; margin: 0 }
+  .long { max-width: 65ch }
+  .tiny { font-size: 16px }
+  .spacer { height: 1600px }
+  .stack h2 { font-size: 48px; margin: 0 }
+  .stack p { font-size: 28px; margin: 0 }
+  /* Bars that content scrolls under: covered is not overlapping, and a button under a bar is not crowding it */
+  header { position: sticky; top: 0; background: #fff; z-index: 2 }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 0; padding: 8px 16px; background: #fff;
+            border-top: 1px solid #999; z-index: 2 }
+  .tabbar a { display: inline-block; min-width: 96px; min-height: 48px; padding: 12px; box-sizing: border-box; color: #111 }
+  .rows button { display: block; min-height: 48px; margin: 0 0 24px; padding: 12px 20px; border: 1px solid #555; background: #fff; color: #111 }
+</style>
+</head>
+<body>
+<header><nav class="icons"><button class="ic" aria-label="Menu">=</button><button class="ic" aria-label="Search">?</button></nav></header>
+<main>
+<h1>Draft</h1>
+<p class="sub">Inventory finance for brands</p>
+<div class="actions"><a class="btn" href="#apply">Apply</a><a class="btn quiet" href="#call">Book a call</a></div>
+<div class="mask"><span class="word">MAIN</span></div>
+<div class="mask open"><span class="word">July</span></div>
+<div class="card">A line of credit sized to your sales. Draw when stock is due, repay from what you sell, and see the fee before every draw.</div>
+<p class="faint">Indicative, not an offer</p>
+<div class="photo"><p class="over">Apply in minutes</p></div>
+<p class="long">Draft reads your own bank and sales to size a line of credit that grows with your brand, so a big purchase order never has to wait for the retailer to pay. You draw what you need when stock is due, you see the fee before every draw, and you repay from the sales that stock makes, with nothing to pay on money you have not drawn and no equity given up at any point along the way.</p>
+<p class="tiny">Terms apply</p>
+<div class="spacer"></div>
+<section class="stack"><h2>Cash for stock</h2><p>Paid back from sales</p></section>
+<div class="rows"><button>Connect a bank</button><button>Add a shop</button><button>Invite a teammate</button><button>Upload a statement</button>
+<button>Ask a question</button><button>See the fee</button><button>Draw</button><button>Repay</button></div>
+<div style="height: 120px"></div>
+</main>
+<nav class="tabbar"><a href="#home">Home</a><a href="#line">Line</a><a href="#help">Help</a></nav>
+</body>
+</html>

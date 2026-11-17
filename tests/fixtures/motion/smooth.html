@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion smooth</title>
+<!-- Smooth: one compositor animation on transform, and plain sections to scroll through. stall.html is this page
+     with a 150 ms block on the main thread once the reader scrolls past 600 px. -->
+<style>
+  body { margin: 0; font: 18px/1.5 Arial, sans-serif; color: #111 }
+  section { height: 900px; padding: 40px; box-sizing: border-box; border-bottom: 1px solid #ddd }
+  .dot { width: 40px; height: 40px; background: #1b4dff; border-radius: 50%; animation: drift 2s ease-in-out infinite alternate }
+  @keyframes drift { from { transform: translateX(0) } to { transform: translateX(300px) } }
+</style>
+</head>
+<body>
+<section id="hero"><h1>Smooth</h1><div class="dot"></div></section>
+<section id="middle"><p>Middle</p></section>
+<section id="end"><p>End</p></section>
+</body>
+</html>

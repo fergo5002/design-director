@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion on layout properties</title>
+<!-- Animation that makes the browser lay the page out again every frame: a CSS animation on `left`, a script that
+     sets `width` each frame, and a banner pushed in above the content after load (a layout shift). -->
+<style>
+  body { margin: 0; font: 18px/1.5 Arial, sans-serif; color: #111 }
+  section { height: 900px; padding: 40px; box-sizing: border-box }
+  #slider { position: relative; width: 40px; height: 40px; background: #1b4dff; animation: slide 2s linear infinite alternate }
+  @keyframes slide { from { left: 0 } to { left: 300px } }
+  #grow { height: 20px; background: #e85d2a; width: 10px }
+  .banner { height: 120px; background: #ffe58a; padding: 20px; box-sizing: border-box }
+</style>
+</head>
+<body>
+<section id="hero"><h1>Layout motion</h1><div id="slider"></div><div id="grow"></div><p id="copy">Copy that will be pushed down.</p></section>
+<section id="end"><p>End</p></section>
+<script>
+  const grow = document.getElementById('grow');
+  let w = 10;
+  (function tick() { w = w >= 300 ? 10 : w + 3; grow.style.width = w + 'px'; requestAnimationFrame(tick); })();
+  setTimeout(() => {
+    const b = document.createElement('div');
+    b.className = 'banner';
+    b.textContent = 'A banner that arrives late';
+    document.body.prepend(b);
+  }, 1500);
+</script>
+</body>
+</html>
